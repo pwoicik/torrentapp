@@ -1,0 +1,72 @@
+[versions]
+acra = "5.9.7"
+activity = "1.8.1"
+agp = "8.2.0"
+android-junit = "1.1.5"
+android-rules = "1.5.0"
+circuit = "0.17.1"
+commons-io = "2.13.0"
+commons-text = "1.10.0"
+compose = "1.6.0-beta02"
+compose-compiler = "1.5.6"
+compose-m3 = "1.2.0-alpha12"
+coreKtx = "1.12.0"
+desugaring = "2.0.4"
+espressoCore = "3.5.1"
+jna = "5.13.0"
+junit = "4.13.2"
+kotlin = "1.9.21"
+ksp = "1.9.21-1.0.15"
+ktinject = "0.6.3"
+libtorrent = "2.1.0-31"
+lifecycle = "2.6.2"
+material = "1.10.0"
+sqldelight = "2.0.1"
+versions = "0.50.0"
+work = "2.9.0"
+
+[libraries]
+acra-dialog = { module = "ch.acra:acra-dialog", version.ref = "acra" }
+acra-mail = { module = "ch.acra:acra-mail", version.ref = "acra" }
+android-core = { module = "androidx.core:core-ktx", version.ref = "coreKtx" }
+android-lifecycle = { module = "androidx.lifecycle:lifecycle-runtime-ktx", version.ref = "lifecycle" }
+android-test-espresso = { module = "androidx.test.espresso:espresso-core", version.ref = "espressoCore" }
+android-test-junit = { module = "androidx.test.ext:junit", version.ref = "android-junit" }
+android-test-rules = { module = "androidx.test:rules", version.ref = "android-rules" }
+circuit-android = { module = "com.slack.circuit:circuitx-android", version.ref = "circuit" }
+circuit-foundation = { module = "com.slack.circuit:circuit-foundation", version.ref = "circuit" }
+circuit-gestureNavigation = { module = "com.slack.circuit:circuitx-gesture-navigation", version.ref = "circuit" }
+circuit-overlay = { module = "com.slack.circuit:circuitx-overlays", version.ref = "circuit" }
+circuit-test = { module = "com.slack.circuit:circuit-test", version.ref = "circuit" }
+commons-io = { module = "commons-io:commons-io", version.ref = "commons-io" }
+commons-text = { module = "org.apache.commons:commons-text", version.ref = "commons-text" }
+compose-activity = { group = "androidx.activity", name = "activity-compose", version.ref = "activity" }
+compose-compiler = { module = "androidx.compose.compiler:compiler", version.ref = "compose-compiler" }
+compose-icons = { module = "androidx.compose.material:material-icons-extended", version.ref = "compose" }
+compose-lifecycle = { module = "androidx.lifecycle:lifecycle-runtime-compose", version.ref = "lifecycle" }
+compose-m3 = { module = "androidx.compose.material3:material3", version.ref = "compose-m3" }
+compose-test = { module = "androidx.compose.ui:ui-test-junit4", version.ref = "compose" }
+compose-tooling = { module = "androidx.compose.ui:ui-tooling", version.ref = "compose" }
+compose-tooling-data = { module = "androidx.compose.ui:ui-tooling-data", version.ref = "compose" }
+compose-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview", version.ref = "compose" }
+compose-ui = { module = "androidx.compose.ui:ui", version.ref = "compose" }
+desugaring = { module = "com.android.tools:desugar_jdk_libs_nio", version.ref = "desugaring" }
+jna = { module = "net.java.dev.jna:jna", version.ref = "jna" }
+junit = { module = "junit:junit", version.ref = "junit" }
+ktinject = { module = "me.tatarka.inject:kotlin-inject-runtime", version.ref = "ktinject" }
+ktinject-compiler = { module = "me.tatarka.inject:kotlin-inject-compiler-ksp", version.ref = "ktinject" }
+libtorrent = { module = "org.libtorrent4j:libtorrent4j", version.ref = "libtorrent" }
+libtorrent-amd64 = { module = "org.libtorrent4j:libtorrent4j-android-x86_64", version.ref = "libtorrent" }
+libtorrent-arm64 = { module = "org.libtorrent4j:libtorrent4j-android-arm64", version.ref = "libtorrent" }
+lifecycle-viewmodel = { module = "androidx.lifecycle:lifecycle-viewmodel-ktx", version.ref = "lifecycle" }
+material = { module = "com.google.android.material:material", version.ref = "material" }
+sqldelight-android = { module = "app.cash.sqldelight:android-driver", version.ref = "sqldelight" }
+sqldelight-coroutines = { module = "app.cash.sqldelight:coroutines-extensions", version.ref = "sqldelight" }
+work = { module = "androidx.work:work-runtime", version.ref = "work" }
+
+[plugins]
+agp = { id = "com.android.application", version.ref = "agp" }
+kgp = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
+sqldelight = { id = "app.cash.sqldelight", version.ref = "sqldelight" }
+versions = { id = "com.github.ben-manes.versions", version.ref = "versions" }

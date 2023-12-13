@@ -1,0 +1,6 @@
+CREATE TABLE torrents (
+    id INTEGER PRIMARY KEY AUTOINCREMENT
+);
+
+selectAll:
+SELECT * FROM torrents;
