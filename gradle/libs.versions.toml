@@ -60,6 +60,7 @@ ktor-server = { module = "io.ktor:ktor-server-core", version.ref = "ktor" }
 ktor-server-netty = { module = "io.ktor:ktor-server-netty", version.ref = "ktor" }
 libtorrent = { module = "org.libtorrent4j:libtorrent4j", version.ref = "libtorrent" }
 libtorrent-amd64 = { module = "org.libtorrent4j:libtorrent4j-android-x86_64", version.ref = "libtorrent" }
+libtorrent-arm32 = { module = "org.libtorrent4j:libtorrent4j-android-arm", version.ref = "libtorrent" }
 libtorrent-arm64 = { module = "org.libtorrent4j:libtorrent4j-android-arm64", version.ref = "libtorrent" }
 lifecycle-viewmodel = { module = "androidx.lifecycle:lifecycle-viewmodel-ktx", version.ref = "lifecycle" }
 material = { module = "com.google.android.material:material", version.ref = "material" }

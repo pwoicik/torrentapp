@@ -24,7 +24,7 @@ android {
         vectorDrawables.useSupportLibrary = true
 
         ndk {
-            abiFilters.addAll(listOf("arm64-v8a", "x86_64"))
+            abiFilters += setOf("armeabi-v7a", "arm64-v8a", "x86_64")
         }
     }
 
@@ -90,6 +90,7 @@ android {
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
+            excludes += "/META-INF/{INDEX.LIST,io.netty.versions.properties}"
         }
     }
 }
@@ -135,6 +136,7 @@ dependencies {
 
     implementation(libs.jna) { artifact { type = "aar" } }
     implementation(libs.libtorrent)
+    implementation(libs.libtorrent.arm32)
     implementation(libs.libtorrent.arm64)
     implementation(libs.libtorrent.amd64)
 
