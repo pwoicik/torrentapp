@@ -18,6 +18,7 @@ junit = "4.13.2"
 kotlin = "1.9.21"
 ksp = "1.9.21-1.0.15"
 ktinject = "0.6.3"
+ktor = "2.3.7"
 libtorrent = "2.1.0-31"
 lifecycle = "2.6.2"
 material = "1.10.0"
@@ -55,6 +56,8 @@ jna = { module = "net.java.dev.jna:jna", version.ref = "jna" }
 junit = { module = "junit:junit", version.ref = "junit" }
 ktinject = { module = "me.tatarka.inject:kotlin-inject-runtime", version.ref = "ktinject" }
 ktinject-compiler = { module = "me.tatarka.inject:kotlin-inject-compiler-ksp", version.ref = "ktinject" }
+ktor-server = { module = "io.ktor:ktor-server-core", version.ref = "ktor" }
+ktor-server-netty = { module = "io.ktor:ktor-server-netty", version.ref = "ktor" }
 libtorrent = { module = "org.libtorrent4j:libtorrent4j", version.ref = "libtorrent" }
 libtorrent-amd64 = { module = "org.libtorrent4j:libtorrent4j-android-x86_64", version.ref = "libtorrent" }
 libtorrent-arm64 = { module = "org.libtorrent4j:libtorrent4j-android-arm64", version.ref = "libtorrent" }

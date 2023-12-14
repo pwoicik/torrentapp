@@ -19,11 +19,22 @@
             android:name=".MainActivity"
             android:configChanges="uiMode|touchscreen|smallestScreenSize|screenSize|screenLayout|orientation|navigation|mnc|mcc|locale|layoutDirection|keyboardHidden|keyboard|grammaticalGender|fontWeightAdjustment|fontScale|density|colorMode"
             android:exported="true"
-            android:theme="@style/Theme.TorrentApp">
+            android:launchMode="singleTask"
+            android:theme="@style/Theme.TorrentApp"
+            android:windowSoftInputMode="adjustResize">
+
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data android:scheme="magnet" />
             </intent-filter>
         </activity>
     </application>

@@ -5,6 +5,9 @@ import app.cash.sqldelight.async.coroutines.synchronous
 import app.cash.sqldelight.db.SqlDriver
 import app.cash.sqldelight.driver.android.AndroidSqliteDriver
 import com.github.pwoicik.torrentapp.db.Database
+import com.github.pwoicik.torrentapp.ui.addtorrent.AddTorrent
+import com.github.pwoicik.torrentapp.ui.addtorrent.AddTorrentPresenter
+import com.github.pwoicik.torrentapp.ui.addtorrent.AddTorrentScreen
 import com.github.pwoicik.torrentapp.ui.main.Main
 import com.github.pwoicik.torrentapp.ui.main.MainPresenter
 import com.github.pwoicik.torrentapp.ui.main.MainScreen
@@ -13,6 +16,10 @@ import com.slack.circuit.runtime.presenter.Presenter
 import com.slack.circuit.runtime.presenter.presenterOf
 import com.slack.circuit.runtime.ui.Ui
 import com.slack.circuit.runtime.ui.ui
+import io.ktor.server.engine.embeddedServer
+import io.ktor.server.netty.Netty
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import me.tatarka.inject.annotations.Component
 import me.tatarka.inject.annotations.IntoSet
 import me.tatarka.inject.annotations.Provides
@@ -22,11 +29,11 @@ import me.tatarka.inject.annotations.Scope
 @Target(AnnotationTarget.CLASS, AnnotationTarget.FUNCTION, AnnotationTarget.PROPERTY_GETTER)
 annotation class AppScope
 
-interface MainUiComponent {
+interface UiComponent {
     @[Provides IntoSet]
-    fun mainPresenterFactory() = Presenter.Factory { screen, _, _ ->
+    fun mainPresenterFactory() = Presenter.Factory { screen, navigator, _ ->
         when (screen) {
-            is MainScreen -> presenterOf { MainPresenter(screen) }
+            is MainScreen -> presenterOf { MainPresenter(screen, navigator) }
             else -> null
         }
     }
@@ -40,6 +47,30 @@ interface MainUiComponent {
             else -> null
         }
     }
+
+    @[Provides IntoSet]
+    fun addTorrentPresenterFactory() = Presenter.Factory { screen, navigator, _ ->
+        when (screen) {
+            is AddTorrentScreen -> presenterOf { AddTorrentPresenter(screen, navigator) }
+            else -> null
+        }
+    }
+
+    @[Provides IntoSet]
+    fun addTorrentUiFactory() = Ui.Factory { screen, _ ->
+        when (screen) {
+            is AddTorrentScreen,
+            -> ui<AddTorrentScreen.State> { state, modifier -> AddTorrent(state, modifier) }
+
+            else -> null
+        }
+    }
+}
+
+interface NetComponent {
+    @AppScope
+    @Provides
+    fun abc() = CoroutineScope(Dispatchers.IO).embeddedServer(Netty) {}
 }
 
 interface DbComponent {
@@ -60,7 +91,7 @@ interface DbComponent {
 @Component
 abstract class AppComponent(
     @get:Provides protected val appContext: Context,
-) : MainUiComponent, DbComponent {
+) : UiComponent, DbComponent {
     @AppScope
     @Provides
     protected fun circuit(

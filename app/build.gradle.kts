@@ -76,6 +76,7 @@ android {
 
     kotlinOptions {
         jvmTarget = "17"
+        options.optIn.addAll("kotlinx.coroutines.FlowPreview")
     }
 
     buildFeatures {
@@ -142,4 +143,7 @@ dependencies {
 
     implementation(libs.sqldelight.android)
     implementation(libs.sqldelight.coroutines)
+
+    implementation(libs.ktor.server)
+    implementation(libs.ktor.server.netty)
 }
