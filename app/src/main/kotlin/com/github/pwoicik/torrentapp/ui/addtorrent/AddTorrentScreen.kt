@@ -54,9 +54,7 @@ import androidx.compose.ui.unit.dp
 import arrow.core.getOrElse
 import com.github.pwoicik.torrentapp.domain.model.Magnet
 import com.github.pwoicik.torrentapp.domain.model.MagnetMetadata
-import com.github.pwoicik.torrentapp.domain.model.MagnetUri
 import com.github.pwoicik.torrentapp.domain.usecase.GetMagnetMetadataUseCase
-import com.github.pwoicik.torrentapp.domain.usecase.ParseMagnetUseCase
 import com.github.pwoicik.torrentapp.ui.addtorrent.AddTorrentScreen.Event
 import com.github.pwoicik.torrentapp.ui.util.format
 import com.slack.circuit.runtime.CircuitUiState
@@ -69,10 +67,9 @@ import java.time.format.DateTimeFormatter
 
 @Parcelize
 data class AddTorrentScreen(
-    val magnet: MagnetUri,
+    val magnet: Magnet,
 ) : Screen {
     data class State(
-        val magnet: Magnet,
         val metadata: MagnetMetadata?,
         val startImmediately: Boolean,
         val sequentialDownload: Boolean,
@@ -103,24 +100,19 @@ enum class ContentLayout {
 
 @Composable
 fun AddTorrentPresenter(
+    getMagnetMetadata: GetMagnetMetadataUseCase,
     screen: AddTorrentScreen,
     navigator: Navigator,
-    parseMagnet: ParseMagnetUseCase,
-    getMagnetMetadata: GetMagnetMetadataUseCase,
 ): AddTorrentScreen.State {
     val context = LocalContext.current
-    val magnet = remember {
-        parseMagnet(screen.magnet).getOrElse { TODO() }
-    }
     val metadata by produceState<MagnetMetadata?>(initialValue = null) {
-        value = getMagnetMetadata(magnet).getOrElse { TODO() }
+        value = getMagnetMetadata(screen.magnet).getOrElse { TODO() }
     }
     var startImmediately by remember { mutableStateOf(true) }
     var sequentialDownload by remember { mutableStateOf(false) }
     var prioritizeFirstAndLast by remember { mutableStateOf(false) }
     var contentLayout by remember { mutableStateOf(ContentLayout.Original) }
     return AddTorrentScreen.State(
-        magnet = magnet,
         metadata = metadata,
         startImmediately = startImmediately,
         sequentialDownload = sequentialDownload,
@@ -156,6 +148,7 @@ fun AddTorrentPresenter(
 
 @Composable
 fun AddTorrent(
+    screen: AddTorrentScreen,
     uiState: AddTorrentScreen.State,
     modifier: Modifier = Modifier,
 ) {
@@ -190,7 +183,7 @@ fun AddTorrent(
                     LinearProgressIndicator(Modifier.fillMaxWidth())
                 }
             }
-            uiState.magnet.let {
+            screen.magnet.let {
                 Column(
                     modifier = Modifier.padding(12.dp),
                 ) {

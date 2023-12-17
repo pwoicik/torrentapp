@@ -3,6 +3,7 @@ package com.github.pwoicik.torrentapp.di
 import app.cash.sqldelight.async.coroutines.synchronous
 import app.cash.sqldelight.db.SqlDriver
 import app.cash.sqldelight.driver.android.AndroidSqliteDriver
+import com.github.pwoicik.torrentapp.MainActivityDelegate
 import com.github.pwoicik.torrentapp.data.usecase.GetMagnetMetadataUseCaseImpl
 import com.github.pwoicik.torrentapp.data.usecase.ParseMagnetUseCaseImpl
 import com.github.pwoicik.torrentapp.db.Database
@@ -38,10 +39,22 @@ interface UseCaseComponent {
 }
 
 interface UiComponent {
+    @AppScope
+    @Provides
+    fun circuit(
+        presenterFactories: Set<Presenter.Factory>,
+        uiFactories: Set<Ui.Factory>,
+    ) = Circuit.Builder()
+        .addPresenterFactories(presenterFactories)
+        .addUiFactories(uiFactories)
+        .build()
+
     @[Provides IntoSet]
-    fun mainPresenterFactory() = Presenter.Factory { screen, navigator, _ ->
+    fun mainPresenterFactory(
+        parseMagnet: () -> ParseMagnetUseCase,
+    ) = Presenter.Factory { screen, navigator, _ ->
         when (screen) {
-            is MainScreen -> presenterOf { MainPresenter(screen, navigator) }
+            is MainScreen -> presenterOf { MainPresenter(parseMagnet(), navigator) }
             else -> null
         }
     }
@@ -58,18 +71,11 @@ interface UiComponent {
 
     @[Provides IntoSet]
     fun addTorrentPresenterFactory(
-        parseMagnet: () -> ParseMagnetUseCase,
         getMagnetMetadata: () -> GetMagnetMetadataUseCase,
     ) = Presenter.Factory { screen, navigator, _ ->
         when (screen) {
-            is AddTorrentScreen -> presenterOf {
-                AddTorrentPresenter(
-                    screen,
-                    navigator,
-                    parseMagnet(),
-                    getMagnetMetadata(),
-                )
-            }
+            is AddTorrentScreen,
+            -> presenterOf { AddTorrentPresenter(getMagnetMetadata(), screen, navigator) }
 
             else -> null
         }
@@ -79,7 +85,7 @@ interface UiComponent {
     fun addTorrentUiFactory() = Ui.Factory { screen, _ ->
         when (screen) {
             is AddTorrentScreen,
-            -> ui<AddTorrentScreen.State> { state, modifier -> AddTorrent(state, modifier) }
+            -> ui<AddTorrentScreen.State> { state, modifier -> AddTorrent(screen, state, modifier) }
 
             else -> null
         }
@@ -113,15 +119,5 @@ interface DbComponent {
 abstract class AppComponent(
     @get:Provides protected val context: ApplicationContext,
 ) : UiComponent, DbComponent, NetComponent, UseCaseComponent {
-    @AppScope
-    @Provides
-    protected fun circuit(
-        presenterFactories: Set<Presenter.Factory>,
-        uiFactories: Set<Ui.Factory>,
-    ) = Circuit.Builder()
-        .addPresenterFactories(presenterFactories)
-        .addUiFactories(uiFactories)
-        .build()
-
-    abstract val circuit: Circuit
+    abstract val mainActivityDelegate: MainActivityDelegate
 }

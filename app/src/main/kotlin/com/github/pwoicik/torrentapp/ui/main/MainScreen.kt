@@ -26,8 +26,9 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
-import com.github.pwoicik.torrentapp.domain.model.MagnetUri
+import com.github.pwoicik.torrentapp.domain.usecase.ParseMagnetUseCase
 import com.github.pwoicik.torrentapp.ui.addtorrent.AddTorrentScreen
+import com.github.pwoicik.torrentapp.ui.main.MainScreen.Event
 import com.slack.circuit.runtime.CircuitUiEvent
 import com.slack.circuit.runtime.CircuitUiState
 import com.slack.circuit.runtime.Navigator
@@ -37,21 +38,46 @@ import kotlinx.parcelize.Parcelize
 @Parcelize
 data object MainScreen : Screen {
     data class State(
+        val showMagnetInput: Boolean,
+        val magnetError: Boolean,
         val event: (Event) -> Unit,
     ) : CircuitUiState
 
     sealed interface Event : CircuitUiEvent {
-        data class MagnetChanged(val value: String) : Event
+        data object AddMagnetClicked : Event
+        data object MagnetChanged : Event
+        data class MagnetConfirmed(val value: String) : Event
+        data object MagnetInputDismissed : Event
     }
 }
 
 @Composable
-fun MainPresenter(screen: MainScreen, navigator: Navigator): MainScreen.State {
-    return MainScreen.State {
-        when (it) {
-            is MainScreen.Event.MagnetChanged -> navigator.goTo(
-                AddTorrentScreen(MagnetUri(it.value))
-            )
+fun MainPresenter(
+    parseMagnet: ParseMagnetUseCase,
+    navigator: Navigator,
+): MainScreen.State {
+    var showMagnetInput by remember { mutableStateOf(false) }
+    var magnetError by remember { mutableStateOf(false) }
+    return MainScreen.State(
+        showMagnetInput = showMagnetInput,
+        magnetError = magnetError,
+    ) { ev ->
+        when (ev) {
+            Event.AddMagnetClicked -> showMagnetInput = true
+
+            Event.MagnetChanged -> magnetError = false
+
+            is Event.MagnetConfirmed -> {
+                parseMagnet(ev.value).fold(
+                    ifLeft = { magnetError = true },
+                    ifRight = {
+                        showMagnetInput = false
+                        navigator.goTo(AddTorrentScreen(it))
+                    },
+                )
+            }
+
+            Event.MagnetInputDismissed -> showMagnetInput = false
         }
     }
 }
@@ -66,8 +92,7 @@ fun Main(
             .safeDrawingPadding()
             .fillMaxSize(),
     ) {
-        var visible by remember { mutableStateOf(false) }
-        if (visible) {
+        if (uiState.showMagnetInput) {
             var magnet by remember {
                 mutableStateOf(
                     TextFieldValue(
@@ -78,12 +103,16 @@ fun Main(
             }
             val focusRequester = remember { FocusRequester() }
             AlertDialog(
-                onDismissRequest = { visible = false },
+                onDismissRequest = { uiState.event(Event.MagnetInputDismissed) },
                 title = { Text("Download from magnet") },
                 text = {
                     OutlinedTextField(
                         value = magnet,
-                        onValueChange = { magnet = it },
+                        onValueChange = {
+                            magnet = it
+                            uiState.event(Event.MagnetChanged)
+                        },
+                        isError = uiState.magnetError,
                         modifier = Modifier
                             .fillMaxWidth()
                             .focusRequester(focusRequester),
@@ -92,8 +121,7 @@ fun Main(
                 confirmButton = {
                     TextButton(
                         onClick = {
-                            visible = false
-                            uiState.event(MainScreen.Event.MagnetChanged(magnet.text))
+                            uiState.event(Event.MagnetConfirmed(magnet.text))
                         },
                     ) {
                         Text("Download")
@@ -105,7 +133,7 @@ fun Main(
             }
         }
         FloatingActionButton(
-            onClick = { visible = true },
+            onClick = { uiState.event(Event.AddMagnetClicked) },
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .padding(24.dp),

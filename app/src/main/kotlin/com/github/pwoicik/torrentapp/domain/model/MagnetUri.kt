@@ -5,4 +5,8 @@ import kotlinx.parcelize.Parcelize
 
 @Parcelize
 @JvmInline
-value class MagnetUri(val uri: String) : Parcelable
+value class MagnetUri @UriMustBeValid constructor(val uri: String) : Parcelable
+
+@RequiresOptIn
+@Retention(AnnotationRetention.BINARY)
+annotation class UriMustBeValid
