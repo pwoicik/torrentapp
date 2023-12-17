@@ -76,7 +76,10 @@ android {
 
     kotlinOptions {
         jvmTarget = "17"
-        options.optIn.addAll("kotlinx.coroutines.FlowPreview")
+        options.optIn.addAll(
+            "kotlinx.coroutines.FlowPreview",
+            "androidx.compose.material3.ExperimentalMaterial3Api",
+        )
     }
 
     buildFeatures {
