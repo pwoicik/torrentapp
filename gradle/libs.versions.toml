@@ -31,6 +31,7 @@ acra-dialog = { module = "ch.acra:acra-dialog", version.ref = "acra" }
 acra-mail = { module = "ch.acra:acra-mail", version.ref = "acra" }
 android-core = { module = "androidx.core:core-ktx", version.ref = "coreKtx" }
 android-lifecycle = { module = "androidx.lifecycle:lifecycle-runtime-ktx", version.ref = "lifecycle" }
+android-lifecycle-service = { module = "androidx.lifecycle:lifecycle-service", version.ref = "lifecycle" }
 android-test-espresso = { module = "androidx.test.espresso:espresso-core", version.ref = "espressoCore" }
 android-test-junit = { module = "androidx.test.ext:junit", version.ref = "android-junit" }
 android-test-rules = { module = "androidx.test:rules", version.ref = "android-rules" }

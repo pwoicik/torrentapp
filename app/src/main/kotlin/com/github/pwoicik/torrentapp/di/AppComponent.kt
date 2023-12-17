@@ -16,14 +16,11 @@ import com.slack.circuit.runtime.presenter.Presenter
 import com.slack.circuit.runtime.presenter.presenterOf
 import com.slack.circuit.runtime.ui.Ui
 import com.slack.circuit.runtime.ui.ui
-import io.ktor.server.engine.embeddedServer
-import io.ktor.server.netty.Netty
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import me.tatarka.inject.annotations.Component
 import me.tatarka.inject.annotations.IntoSet
 import me.tatarka.inject.annotations.Provides
 import me.tatarka.inject.annotations.Scope
+import org.libtorrent4j.SessionManager
 
 @Scope
 @Target(AnnotationTarget.CLASS, AnnotationTarget.FUNCTION, AnnotationTarget.PROPERTY_GETTER)
@@ -49,9 +46,11 @@ interface UiComponent {
     }
 
     @[Provides IntoSet]
-    fun addTorrentPresenterFactory() = Presenter.Factory { screen, navigator, _ ->
+    fun addTorrentPresenterFactory(
+        session: () -> SessionManager,
+    ) = Presenter.Factory { screen, navigator, _ ->
         when (screen) {
-            is AddTorrentScreen -> presenterOf { AddTorrentPresenter(screen, navigator) }
+            is AddTorrentScreen -> presenterOf { AddTorrentPresenter(screen, navigator, session()) }
             else -> null
         }
     }
@@ -70,7 +69,9 @@ interface UiComponent {
 interface NetComponent {
     @AppScope
     @Provides
-    fun abc() = CoroutineScope(Dispatchers.IO).embeddedServer(Netty) {}
+    fun torrentSession() = SessionManager(false)
+
+    val sessionManager: SessionManager
 }
 
 interface DbComponent {
@@ -91,7 +92,7 @@ interface DbComponent {
 @Component
 abstract class AppComponent(
     @get:Provides protected val appContext: Context,
-) : UiComponent, DbComponent {
+) : UiComponent, DbComponent, NetComponent {
     @AppScope
     @Provides
     protected fun circuit(

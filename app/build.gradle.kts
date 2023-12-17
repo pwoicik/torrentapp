@@ -114,6 +114,7 @@ dependencies {
     coreLibraryDesugaring(libs.desugaring)
     implementation(libs.android.core)
     implementation(libs.android.lifecycle)
+    implementation(libs.android.lifecycle.service)
     androidTestImplementation(libs.android.test.junit)
     androidTestImplementation(libs.android.test.espresso)
 

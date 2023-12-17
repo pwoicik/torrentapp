@@ -1,6 +1,9 @@
 package com.github.pwoicik.torrentapp
 
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -12,7 +15,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.LifecycleOwner
 import com.github.pwoicik.torrentapp.di.inject
 import com.github.pwoicik.torrentapp.ui.addtorrent.AddTorrentScreen
 import com.github.pwoicik.torrentapp.ui.main.MainScreen
@@ -32,6 +38,8 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        registerFinishReceiver()
 
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
@@ -76,5 +84,25 @@ class MainActivity : ComponentActivity() {
             return intent.toUri(0)
         }
         return null
+    }
+
+    private fun registerFinishReceiver() {
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context?, intent: Intent?) {
+                finishAffinity()
+            }
+        }
+        val filter = IntentFilter(ApplicationConstants.ACTION_FINISH)
+        ContextCompat.registerReceiver(
+            this,
+            receiver,
+            filter,
+            ContextCompat.RECEIVER_NOT_EXPORTED,
+        )
+        lifecycle.addObserver(object : DefaultLifecycleObserver {
+            override fun onDestroy(owner: LifecycleOwner) {
+                unregisterReceiver(receiver)
+            }
+        })
     }
 }
