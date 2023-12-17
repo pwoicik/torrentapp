@@ -20,6 +20,7 @@ import androidx.core.view.WindowCompat
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import com.github.pwoicik.torrentapp.di.inject
+import com.github.pwoicik.torrentapp.domain.model.MagnetUri
 import com.github.pwoicik.torrentapp.ui.addtorrent.AddTorrentScreen
 import com.github.pwoicik.torrentapp.ui.main.MainScreen
 import com.github.pwoicik.torrentapp.ui.theme.TorrentAppTheme
@@ -34,7 +35,7 @@ import com.slack.circuitx.gesturenavigation.GestureNavigationDecoration
 class MainActivity : ComponentActivity() {
     private val circuit by inject { circuit }
 
-    private var magnet by mutableStateOf<String?>(null)
+    private var magnet by mutableStateOf<MagnetUri?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -79,9 +80,9 @@ class MainActivity : ComponentActivity() {
         magnet = intent?.let(::magnetFromIntent)
     }
 
-    private fun magnetFromIntent(intent: Intent): String? {
+    private fun magnetFromIntent(intent: Intent): MagnetUri? {
         if (intent.scheme == "magnet") {
-            return intent.toUri(0)
+            return intent.toUri(0).let(::MagnetUri)
         }
         return null
     }

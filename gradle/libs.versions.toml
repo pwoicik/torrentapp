@@ -4,6 +4,7 @@ activity = "1.8.1"
 agp = "8.2.0"
 android-junit = "1.1.5"
 android-rules = "1.5.0"
+arrow = "1.2.0"
 circuit = "0.17.1"
 commons-io = "2.13.0"
 commons-text = "1.10.0"
@@ -35,6 +36,8 @@ android-lifecycle-service = { module = "androidx.lifecycle:lifecycle-service", v
 android-test-espresso = { module = "androidx.test.espresso:espresso-core", version.ref = "espressoCore" }
 android-test-junit = { module = "androidx.test.ext:junit", version.ref = "android-junit" }
 android-test-rules = { module = "androidx.test:rules", version.ref = "android-rules" }
+arrow = { module = "io.arrow-kt:arrow-core", version.ref = "arrow" }
+arrow-coroutines = { module = "io.arrow-kt:arrow-fx-coroutines", version.ref = "arrow" }
 circuit-android = { module = "com.slack.circuit:circuitx-android", version.ref = "circuit" }
 circuit-foundation = { module = "com.slack.circuit:circuit-foundation", version.ref = "circuit" }
 circuit-gestureNavigation = { module = "com.slack.circuit:circuitx-gesture-navigation", version.ref = "circuit" }

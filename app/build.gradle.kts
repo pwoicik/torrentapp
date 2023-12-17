@@ -76,6 +76,9 @@ android {
 
     kotlinOptions {
         jvmTarget = "17"
+        options.freeCompilerArgs.addAll(
+            "-Xcontext-receivers",
+        )
         options.optIn.addAll(
             "kotlinx.coroutines.FlowPreview",
             "androidx.compose.material3.ExperimentalMaterial3Api",
@@ -150,6 +153,6 @@ dependencies {
     implementation(libs.sqldelight.android)
     implementation(libs.sqldelight.coroutines)
 
-    implementation(libs.ktor.server)
-    implementation(libs.ktor.server.netty)
+    implementation(libs.arrow)
+    implementation(libs.arrow.coroutines)
 }

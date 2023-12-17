@@ -1,8 +1,6 @@
 package com.github.pwoicik.torrentapp.ui.addtorrent
 
 import android.os.Environment
-import android.text.format.Formatter
-import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
@@ -19,8 +17,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBackIosNew
 import androidx.compose.material.icons.filled.Download
@@ -51,32 +51,29 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
+import arrow.core.getOrElse
+import com.github.pwoicik.torrentapp.domain.model.Magnet
+import com.github.pwoicik.torrentapp.domain.model.MagnetMetadata
+import com.github.pwoicik.torrentapp.domain.model.MagnetUri
+import com.github.pwoicik.torrentapp.domain.usecase.GetMagnetMetadataUseCase
+import com.github.pwoicik.torrentapp.domain.usecase.ParseMagnetUseCase
 import com.github.pwoicik.torrentapp.ui.addtorrent.AddTorrentScreen.Event
+import com.github.pwoicik.torrentapp.ui.util.format
 import com.slack.circuit.runtime.CircuitUiState
 import com.slack.circuit.runtime.Navigator
 import com.slack.circuit.runtime.screen.Screen
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import kotlinx.parcelize.Parcelize
-import org.libtorrent4j.AddTorrentParams
-import org.libtorrent4j.BDecodeNode
-import org.libtorrent4j.SessionManager
-import org.libtorrent4j.TorrentFlags
-import org.libtorrent4j.TorrentInfo
-import org.libtorrent4j.swig.libtorrent
-import org.libtorrent4j.swig.torrent_flags_t
-import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 @Parcelize
 data class AddTorrentScreen(
-    val magnet: String,
+    val magnet: MagnetUri,
 ) : Screen {
     data class State(
-        val torrent: AddTorrentParams?,
-        val info: TorrentInfo?,
+        val magnet: Magnet,
+        val metadata: MagnetMetadata?,
         val startImmediately: Boolean,
         val sequentialDownload: Boolean,
         val prioritizeFirstAndLast: Boolean,
@@ -108,45 +105,23 @@ enum class ContentLayout {
 fun AddTorrentPresenter(
     screen: AddTorrentScreen,
     navigator: Navigator,
-    session: SessionManager,
+    parseMagnet: ParseMagnetUseCase,
+    getMagnetMetadata: GetMagnetMetadataUseCase,
 ): AddTorrentScreen.State {
     val context = LocalContext.current
-    val torrentParams = remember {
-        try {
-            AddTorrentParams.parseMagnetUri(screen.magnet)!!.apply {
-                if (name.isNullOrEmpty()) {
-                    name = infoHashes.best.toHex()
-                }
-                flags = torrent_flags_t().apply {
-                    and_(TorrentFlags.AUTO_MANAGED.inv())
-                    or_(TorrentFlags.UPLOAD_MODE)
-                    or_(TorrentFlags.STOP_WHEN_READY)
-                }
-                savePath = context
-                    .getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)!!
-                    .absolutePath
-            }
-        } catch (_: IllegalArgumentException) {
-            TODO()
-        }
+    val magnet = remember {
+        parseMagnet(screen.magnet).getOrElse { TODO() }
     }
-    val info by produceState<TorrentInfo?>(initialValue = null) {
-        value = withContext(Dispatchers.IO) {
-            session.fetchMagnet(screen.magnet, Int.MAX_VALUE, context.cacheDir)
-                .also {
-                    Log.d("test", libtorrent.print_entry(BDecodeNode.bdecode(it).swig()))
-                }
-                .let(TorrentInfo::bdecode)
-                .also { torrentParams.torrentInfo = it }
-        }
+    val metadata by produceState<MagnetMetadata?>(initialValue = null) {
+        value = getMagnetMetadata(magnet).getOrElse { TODO() }
     }
     var startImmediately by remember { mutableStateOf(true) }
     var sequentialDownload by remember { mutableStateOf(false) }
     var prioritizeFirstAndLast by remember { mutableStateOf(false) }
     var contentLayout by remember { mutableStateOf(ContentLayout.Original) }
     return AddTorrentScreen.State(
-        torrent = torrentParams,
-        info = info,
+        magnet = magnet,
+        metadata = metadata,
         startImmediately = startImmediately,
         sequentialDownload = sequentialDownload,
         prioritizeFirstAndLast = prioritizeFirstAndLast,
@@ -172,7 +147,9 @@ fun AddTorrentPresenter(
             -> contentLayout = it.value
 
             Event.DownloadClicked,
-            -> Unit // TODO
+            -> {
+
+            }
         }
     }
 }
@@ -195,7 +172,11 @@ fun AddTorrent(
         ) {
             Icon(imageVector = Icons.Default.Download, contentDescription = null)
         }
-        Column(Modifier.safeDrawingPadding()) {
+        Column(
+            modifier = Modifier
+                .safeDrawingPadding()
+                .verticalScroll(rememberScrollState()),
+        ) {
             TopAppBar(
                 title = { Text("Add torrent") },
                 navigationIcon = {
@@ -205,11 +186,11 @@ fun AddTorrent(
                 },
             )
             Box(Modifier.height(4.dp)) {
-                if (uiState.info == null) {
+                if (uiState.metadata == null) {
                     LinearProgressIndicator(Modifier.fillMaxWidth())
                 }
             }
-            uiState.torrent?.let {
+            uiState.magnet.let {
                 Column(
                     modifier = Modifier.padding(12.dp),
                 ) {
@@ -242,8 +223,8 @@ fun AddTorrent(
                 selected = uiState.contentLayout,
                 onSelect = { uiState(Event.ContentLayoutSelected(it)) },
             )
-            AnimatedVisibility(visible = uiState.info != null) {
-                TorrentInfo(info = uiState.info!!)
+            AnimatedVisibility(visible = uiState.metadata != null) {
+                TorrentInfo(info = uiState.metadata!!)
             }
         }
     }
@@ -374,13 +355,13 @@ private fun ContentLayoutPicker(
 
 @Composable
 private fun TorrentInfo(
-    info: TorrentInfo,
+    info: MagnetMetadata,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
     Column(modifier) {
         Row {
-            info.creator()?.ifBlank { null }?.let { creator ->
+            info.creator?.let { creator ->
                 Column(
                     modifier = Modifier
                         .padding(12.dp)
@@ -393,7 +374,7 @@ private fun TorrentInfo(
                     Text(creator)
                 }
             }
-            info.creationDate().takeIf { it != 0L }?.let { epochSeconds ->
+            info.creationDate?.let { instant ->
                 Column(
                     modifier = Modifier
                         .padding(12.dp)
@@ -406,7 +387,7 @@ private fun TorrentInfo(
                     // TODO: formatting
                     Text(
                         text = LocalDateTime.ofInstant(
-                            Instant.ofEpochSecond(epochSeconds),
+                            instant,
                             ZoneId.systemDefault(),
                         ).format(DateTimeFormatter.ISO_DATE_TIME),
                     )
@@ -423,7 +404,7 @@ private fun TorrentInfo(
                     text = "Files",
                     style = MaterialTheme.typography.labelMedium,
                 )
-                Text(info.numFiles().toString())
+                Text(info.numberOfFiles.toString())
             }
             Column(
                 modifier = Modifier
@@ -434,7 +415,7 @@ private fun TorrentInfo(
                     text = "Size",
                     style = MaterialTheme.typography.labelMedium,
                 )
-                Text(Formatter.formatShortFileSize(context, info.sizeOnDisk()))
+                Text(with(context) { info.totalSize.format() })
             }
         }
         Column(
@@ -446,8 +427,8 @@ private fun TorrentInfo(
             )
             Text(
                 text = "%d x %s".format(
-                    info.numPieces(),
-                    Formatter.formatShortFileSize(context, info.pieceLength().toLong()),
+                    info.numberOfPieces,
+                    with(context) { info.pieceSize.format() },
                 )
             )
         }
@@ -459,7 +440,7 @@ private fun TorrentInfo(
                 style = MaterialTheme.typography.labelMedium,
             )
             SelectionContainer {
-                Text(info.infoHashes().best.toHex())
+                Text(info.hash.value)
             }
         }
     }

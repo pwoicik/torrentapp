@@ -26,6 +26,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
+import com.github.pwoicik.torrentapp.domain.model.MagnetUri
 import com.github.pwoicik.torrentapp.ui.addtorrent.AddTorrentScreen
 import com.slack.circuit.runtime.CircuitUiEvent
 import com.slack.circuit.runtime.CircuitUiState
@@ -48,7 +49,9 @@ data object MainScreen : Screen {
 fun MainPresenter(screen: MainScreen, navigator: Navigator): MainScreen.State {
     return MainScreen.State {
         when (it) {
-            is MainScreen.Event.MagnetChanged -> navigator.goTo(AddTorrentScreen(it.value))
+            is MainScreen.Event.MagnetChanged -> navigator.goTo(
+                AddTorrentScreen(MagnetUri(it.value))
+            )
         }
     }
 }

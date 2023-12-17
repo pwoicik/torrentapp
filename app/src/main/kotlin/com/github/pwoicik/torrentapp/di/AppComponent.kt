@@ -1,10 +1,13 @@
 package com.github.pwoicik.torrentapp.di
 
-import android.content.Context
 import app.cash.sqldelight.async.coroutines.synchronous
 import app.cash.sqldelight.db.SqlDriver
 import app.cash.sqldelight.driver.android.AndroidSqliteDriver
+import com.github.pwoicik.torrentapp.data.usecase.GetMagnetMetadataUseCaseImpl
+import com.github.pwoicik.torrentapp.data.usecase.ParseMagnetUseCaseImpl
 import com.github.pwoicik.torrentapp.db.Database
+import com.github.pwoicik.torrentapp.domain.usecase.GetMagnetMetadataUseCase
+import com.github.pwoicik.torrentapp.domain.usecase.ParseMagnetUseCase
 import com.github.pwoicik.torrentapp.ui.addtorrent.AddTorrent
 import com.github.pwoicik.torrentapp.ui.addtorrent.AddTorrentPresenter
 import com.github.pwoicik.torrentapp.ui.addtorrent.AddTorrentScreen
@@ -25,6 +28,14 @@ import org.libtorrent4j.SessionManager
 @Scope
 @Target(AnnotationTarget.CLASS, AnnotationTarget.FUNCTION, AnnotationTarget.PROPERTY_GETTER)
 annotation class AppScope
+
+interface UseCaseComponent {
+    val ParseMagnetUseCaseImpl.bind: ParseMagnetUseCase
+        @Provides get() = this
+
+    val GetMagnetMetadataUseCaseImpl.bind: GetMagnetMetadataUseCase
+        @Provides get() = this
+}
 
 interface UiComponent {
     @[Provides IntoSet]
@@ -47,10 +58,19 @@ interface UiComponent {
 
     @[Provides IntoSet]
     fun addTorrentPresenterFactory(
-        session: () -> SessionManager,
+        parseMagnet: () -> ParseMagnetUseCase,
+        getMagnetMetadata: () -> GetMagnetMetadataUseCase,
     ) = Presenter.Factory { screen, navigator, _ ->
         when (screen) {
-            is AddTorrentScreen -> presenterOf { AddTorrentPresenter(screen, navigator, session()) }
+            is AddTorrentScreen -> presenterOf {
+                AddTorrentPresenter(
+                    screen,
+                    navigator,
+                    parseMagnet(),
+                    getMagnetMetadata(),
+                )
+            }
+
             else -> null
         }
     }
@@ -77,7 +97,7 @@ interface NetComponent {
 interface DbComponent {
     @AppScope
     @Provides
-    fun driver(context: Context): SqlDriver = AndroidSqliteDriver(
+    fun driver(context: ApplicationContext): SqlDriver = AndroidSqliteDriver(
         schema = Database.Schema.synchronous(),
         context = context,
         name = "torrentapp.db",
@@ -91,8 +111,8 @@ interface DbComponent {
 @AppScope
 @Component
 abstract class AppComponent(
-    @get:Provides protected val appContext: Context,
-) : UiComponent, DbComponent, NetComponent {
+    @get:Provides protected val context: ApplicationContext,
+) : UiComponent, DbComponent, NetComponent, UseCaseComponent {
     @AppScope
     @Provides
     protected fun circuit(
