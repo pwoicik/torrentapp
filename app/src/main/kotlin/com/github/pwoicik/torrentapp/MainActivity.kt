@@ -1,9 +1,6 @@
 package com.github.pwoicik.torrentapp
 
-import android.content.BroadcastReceiver
-import android.content.Context
 import android.content.Intent
-import android.content.IntentFilter
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -15,17 +12,17 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import com.github.pwoicik.torrentapp.di.inject
-import com.github.pwoicik.torrentapp.domain.model.Magnet
+import com.github.pwoicik.torrentapp.domain.model.MagnetInfo
 import com.github.pwoicik.torrentapp.domain.usecase.ParseMagnetUseCase
 import com.github.pwoicik.torrentapp.ui.addtorrent.AddTorrentScreen
 import com.github.pwoicik.torrentapp.ui.main.MainScreen
 import com.github.pwoicik.torrentapp.ui.theme.TorrentAppTheme
 import com.github.pwoicik.torrentapp.ui.util.current
+import com.github.pwoicik.torrentapp.util.registerReceiver
 import com.slack.circuit.backstack.rememberSaveableBackStack
 import com.slack.circuit.foundation.Circuit
 import com.slack.circuit.foundation.CircuitCompositionLocals
@@ -41,6 +38,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        startService(Intent(this, TorrentService::class.java))
         registerFinishReceiver()
         delegate.onIntent(intent)
 
@@ -54,18 +52,9 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun registerFinishReceiver() {
-        val receiver = object : BroadcastReceiver() {
-            override fun onReceive(context: Context?, intent: Intent?) {
-                finishAffinity()
-            }
+        val receiver = registerReceiver(ApplicationConstants.ACTION_FINISH) {
+            finishAndRemoveTask()
         }
-        val filter = IntentFilter(ApplicationConstants.ACTION_FINISH)
-        ContextCompat.registerReceiver(
-            this,
-            receiver,
-            filter,
-            ContextCompat.RECEIVER_NOT_EXPORTED,
-        )
         lifecycle.addObserver(object : DefaultLifecycleObserver {
             override fun onDestroy(owner: LifecycleOwner) {
                 unregisterReceiver(receiver)
@@ -79,7 +68,7 @@ class MainActivityDelegate(
     private val circuit: Circuit,
     private val parseMagnet: ParseMagnetUseCase,
 ) {
-    private val magnet = mutableStateOf<Magnet?>(null)
+    private val magnet = mutableStateOf<MagnetInfo?>(null)
 
     @Composable
     fun Content() {

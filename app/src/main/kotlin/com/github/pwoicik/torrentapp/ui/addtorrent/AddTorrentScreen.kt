@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -43,6 +42,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -52,14 +52,18 @@ import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import arrow.core.getOrElse
-import com.github.pwoicik.torrentapp.domain.model.Magnet
+import com.github.pwoicik.torrentapp.domain.model.MagnetInfo
 import com.github.pwoicik.torrentapp.domain.model.MagnetMetadata
 import com.github.pwoicik.torrentapp.domain.usecase.GetMagnetMetadataUseCase
+import com.github.pwoicik.torrentapp.domain.usecase.SaveMagnetInput
+import com.github.pwoicik.torrentapp.domain.usecase.SaveMagnetUseCase
 import com.github.pwoicik.torrentapp.ui.addtorrent.AddTorrentScreen.Event
-import com.github.pwoicik.torrentapp.ui.util.format
+import com.github.pwoicik.torrentapp.ui.util.formatSize
+import com.slack.circuit.runtime.CircuitUiEvent
 import com.slack.circuit.runtime.CircuitUiState
 import com.slack.circuit.runtime.Navigator
 import com.slack.circuit.runtime.screen.Screen
+import kotlinx.coroutines.launch
 import kotlinx.parcelize.Parcelize
 import java.time.LocalDateTime
 import java.time.ZoneId
@@ -67,7 +71,7 @@ import java.time.format.DateTimeFormatter
 
 @Parcelize
 data class AddTorrentScreen(
-    val magnet: Magnet,
+    val magnet: MagnetInfo,
 ) : Screen {
     data class State(
         val metadata: MagnetMetadata?,
@@ -81,7 +85,7 @@ data class AddTorrentScreen(
         operator fun invoke(event: Event) = event(event)
     }
 
-    sealed interface Event {
+    sealed interface Event : CircuitUiEvent {
         data object NavigationBackClicked : Event
         data object StartImmediatelyClicked : Event
         data object SequentialDownloadClicked : Event
@@ -100,11 +104,13 @@ enum class ContentLayout {
 
 @Composable
 fun AddTorrentPresenter(
-    getMagnetMetadata: GetMagnetMetadataUseCase,
     screen: AddTorrentScreen,
     navigator: Navigator,
+    getMagnetMetadata: GetMagnetMetadataUseCase,
+    saveMagnet: SaveMagnetUseCase,
 ): AddTorrentScreen.State {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     val metadata by produceState<MagnetMetadata?>(initialValue = null) {
         value = getMagnetMetadata(screen.magnet).getOrElse { TODO() }
     }
@@ -139,8 +145,11 @@ fun AddTorrentPresenter(
             -> contentLayout = it.value
 
             Event.DownloadClicked,
-            -> {
-
+            -> scope.launch {
+                saveMagnet(
+                    metadata?.let(SaveMagnetInput::Metadata)
+                        ?: SaveMagnetInput.Info(screen.magnet)
+                )
             }
         }
     }
@@ -165,10 +174,9 @@ fun AddTorrent(
         ) {
             Icon(imageVector = Icons.Default.Download, contentDescription = null)
         }
+        // TODO: fix insets
         Column(
-            modifier = Modifier
-                .safeDrawingPadding()
-                .verticalScroll(rememberScrollState()),
+            modifier = Modifier.verticalScroll(rememberScrollState()),
         ) {
             TopAppBar(
                 title = { Text("Add torrent") },
@@ -351,7 +359,6 @@ private fun TorrentInfo(
     info: MagnetMetadata,
     modifier: Modifier = Modifier,
 ) {
-    val context = LocalContext.current
     Column(modifier) {
         Row {
             info.creator?.let { creator ->
@@ -408,7 +415,7 @@ private fun TorrentInfo(
                     text = "Size",
                     style = MaterialTheme.typography.labelMedium,
                 )
-                Text(with(context) { info.totalSize.format() })
+                Text(info.totalSize.formatSize())
             }
         }
         Column(
@@ -421,7 +428,7 @@ private fun TorrentInfo(
             Text(
                 text = "%d x %s".format(
                     info.numberOfPieces,
-                    with(context) { info.pieceSize.format() },
+                    info.pieceSize.formatSize(),
                 )
             )
         }

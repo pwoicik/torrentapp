@@ -109,7 +109,6 @@ sqldelight {
         create("Database") {
             packageName.set("com.github.pwoicik.torrentapp.db")
             schemaOutputDirectory.set(file("src/main/sqldelight/databases"))
-            deriveSchemaFromMigrations.set(true)
             verifyMigrations.set(true)
             generateAsync.set(true)
         }
@@ -126,6 +125,7 @@ dependencies {
 
     implementation(libs.compose.activity)
     implementation(libs.compose.ui)
+    implementation(libs.compose.lifecycle)
     debugImplementation(libs.compose.tooling)
     debugImplementation(libs.compose.tooling.data)
     implementation(libs.compose.tooling.preview)

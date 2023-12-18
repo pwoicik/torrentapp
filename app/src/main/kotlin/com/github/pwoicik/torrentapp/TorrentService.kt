@@ -3,14 +3,11 @@ package com.github.pwoicik.torrentapp
 import android.Manifest
 import android.app.PendingIntent
 import android.content.BroadcastReceiver
-import android.content.Context
 import android.content.Intent
-import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.PowerManager
-import android.text.format.Formatter
 import androidx.core.app.NotificationChannelCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
@@ -20,6 +17,9 @@ import androidx.core.content.getSystemService
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
 import com.github.pwoicik.torrentapp.di.inject
+import com.github.pwoicik.torrentapp.ui.util.formatSpeed
+import com.github.pwoicik.torrentapp.ui.util.toByteSize
+import com.github.pwoicik.torrentapp.util.registerReceiver
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -69,15 +69,9 @@ class TorrentService : LifecycleService() {
                         1,
                         makeNotification()
                             .setContentText(
-                                "↓ %s/s | ↑ %s/s".format(
-                                    Formatter.formatShortFileSize(
-                                        this@TorrentService,
-                                        stats.downloadRate()
-                                    ),
-                                    Formatter.formatShortFileSize(
-                                        this@TorrentService,
-                                        stats.uploadRate()
-                                    ),
+                                "↓ %s | ↑ %s".format(
+                                    stats.downloadRate().toByteSize().formatSpeed(),
+                                    stats.uploadRate().toByteSize().formatSpeed(),
                                 ),
                             )
                             .build(),
@@ -130,18 +124,9 @@ class TorrentService : LifecycleService() {
         .build()
 
     private fun registerFinishReceiver() {
-        finishReceiver = object : BroadcastReceiver() {
-            override fun onReceive(context: Context?, intent: Intent?) {
-                stopSelf()
-            }
+        finishReceiver = registerReceiver(ApplicationConstants.ACTION_FINISH) {
+            stopSelf()
         }
-        val filter = IntentFilter(ApplicationConstants.ACTION_FINISH)
-        ContextCompat.registerReceiver(
-            this,
-            finishReceiver,
-            filter,
-            ContextCompat.RECEIVER_NOT_EXPORTED,
-        )
     }
 
     override fun onDestroy() {

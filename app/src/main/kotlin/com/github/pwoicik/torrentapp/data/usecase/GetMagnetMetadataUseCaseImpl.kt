@@ -4,7 +4,7 @@ import arrow.core.Either
 import arrow.core.right
 import com.github.pwoicik.torrentapp.di.ApplicationContext
 import com.github.pwoicik.torrentapp.domain.model.ByteSize
-import com.github.pwoicik.torrentapp.domain.model.Magnet
+import com.github.pwoicik.torrentapp.domain.model.MagnetInfo
 import com.github.pwoicik.torrentapp.domain.model.MagnetMetadata
 import com.github.pwoicik.torrentapp.domain.model.Sha1Hash
 import com.github.pwoicik.torrentapp.domain.usecase.GetMagnetMetadataError
@@ -21,7 +21,7 @@ class GetMagnetMetadataUseCaseImpl(
     private val session: SessionManager,
     private val context: ApplicationContext,
 ) : GetMagnetMetadataUseCase {
-    override suspend fun invoke(input: Magnet): Either<GetMagnetMetadataError, MagnetMetadata> {
+    override suspend fun invoke(input: MagnetInfo): Either<GetMagnetMetadataError, MagnetMetadata> {
         val info = withContext(Dispatchers.IO) {
             session.fetchMagnet(
                 input.uri.uri,

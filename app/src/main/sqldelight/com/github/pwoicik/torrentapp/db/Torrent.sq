@@ -1,6 +1,15 @@
-CREATE TABLE torrents (
-    id INTEGER PRIMARY KEY AUTOINCREMENT
+import kotlin.Boolean;
+
+CREATE TABLE torrent (
+    hash TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    sequential INTEGER AS Boolean NOT NULL
 );
 
+CREATE INDEX torrent_hash ON torrent(hash);
+
 selectAll:
-SELECT * FROM torrents;
+SELECT * FROM torrent;
+
+insert:
+INSERT OR IGNORE INTO torrent VALUES ?;
