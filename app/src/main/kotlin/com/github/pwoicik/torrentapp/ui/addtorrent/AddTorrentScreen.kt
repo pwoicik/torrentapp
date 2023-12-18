@@ -147,8 +147,10 @@ fun AddTorrentPresenter(
             Event.DownloadClicked,
             -> scope.launch {
                 saveMagnet(
-                    metadata?.let(SaveMagnetInput::Metadata)
-                        ?: SaveMagnetInput.Info(screen.magnet)
+                    SaveMagnetInput(
+                        info = screen.magnet,
+                        metadata = metadata,
+                    ),
                 )
                 navigator.pop()
             }

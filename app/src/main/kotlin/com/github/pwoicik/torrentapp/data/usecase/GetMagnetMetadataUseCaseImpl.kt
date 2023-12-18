@@ -24,7 +24,7 @@ class GetMagnetMetadataUseCaseImpl(
     override suspend fun invoke(input: MagnetInfo): Either<GetMagnetMetadataError, MagnetMetadata> {
         val info = withContext(Dispatchers.IO) {
             session.fetchMagnet(
-                input.uri.uri,
+                input.uri.value,
                 Int.MAX_VALUE,
                 context.cacheDir,
             ).let(TorrentInfo::bdecode)

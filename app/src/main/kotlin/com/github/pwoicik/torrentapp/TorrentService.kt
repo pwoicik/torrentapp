@@ -8,6 +8,7 @@ import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.PowerManager
+import android.util.Log
 import androidx.core.app.NotificationChannelCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
@@ -23,6 +24,8 @@ import com.github.pwoicik.torrentapp.util.registerReceiver
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import org.libtorrent4j.AlertListener
+import org.libtorrent4j.alerts.Alert
 import kotlin.time.Duration.Companion.seconds
 
 class TorrentService : LifecycleService() {
@@ -56,6 +59,20 @@ class TorrentService : LifecycleService() {
             },
         )
         sessionManager.start()
+        sessionManager.addListener(object : AlertListener {
+            override fun types() = null
+
+            override fun alert(alert: Alert<*>) {
+                if ("Peer" in alert::class.simpleName!!) return
+                Log.d(
+                    "test",
+                    "%s: %s".format(
+                        alert::class.simpleName,
+                        alert.message(),
+                    ),
+                )
+            }
+        })
         lifecycleScope.launch {
             val manager = NotificationManagerCompat.from(this@TorrentService)
             val stats = sessionManager.stats()
