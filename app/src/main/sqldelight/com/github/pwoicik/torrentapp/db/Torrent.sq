@@ -3,13 +3,15 @@ import kotlin.Boolean;
 CREATE TABLE torrent (
     hash TEXT PRIMARY KEY,
     name TEXT NOT NULL,
+    paused INTEGER AS Boolean NOT NULL,
     sequential INTEGER AS Boolean NOT NULL
-);
+) WITHOUT ROWID;
 
 CREATE INDEX torrent_hash ON torrent(hash);
 
-selectAll:
-SELECT * FROM torrent;
+getTorrentBasicInfos:
+SELECT hash, name, paused
+FROM torrent;
 
 insert:
 INSERT OR IGNORE INTO torrent VALUES ?;

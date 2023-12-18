@@ -150,6 +150,7 @@ fun AddTorrentPresenter(
                     metadata?.let(SaveMagnetInput::Metadata)
                         ?: SaveMagnetInput.Info(screen.magnet)
                 )
+                navigator.pop()
             }
         }
     }

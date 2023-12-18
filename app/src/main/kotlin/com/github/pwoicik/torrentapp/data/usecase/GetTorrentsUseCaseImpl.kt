@@ -1,18 +1,30 @@
 package com.github.pwoicik.torrentapp.data.usecase
 
+import app.cash.sqldelight.async.coroutines.awaitAsList
 import app.cash.sqldelight.coroutines.asFlow
-import app.cash.sqldelight.coroutines.mapToList
 import com.github.pwoicik.torrentapp.db.Database
+import com.github.pwoicik.torrentapp.domain.model.SavedTorrent
+import com.github.pwoicik.torrentapp.domain.model.Sha1Hash
 import com.github.pwoicik.torrentapp.domain.usecase.GetTorrentsUseCase
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.withContext
 import me.tatarka.inject.annotations.Inject
 
 @Inject
 class GetTorrentsUseCaseImpl(
     private val db: Database,
 ) : GetTorrentsUseCase {
-    override fun invoke(input: Unit): Flow<Any> {
-        return db.torrentQueries.selectAll().asFlow().mapToList(Dispatchers.IO)
-    }
+    override fun invoke(input: Unit) =
+        db.torrentQueries.getTorrentBasicInfos().asFlow().map {
+            withContext(Dispatchers.IO) {
+                it.awaitAsList().map {
+                    SavedTorrent(
+                        hash = Sha1Hash(it.hash),
+                        name = it.name,
+                        startPaused = it.paused,
+                    )
+                }
+            }
+        }
 }

@@ -13,12 +13,22 @@ class SaveMagnetUseCaseImpl(
     override suspend fun invoke(input: SaveMagnetInput) {
         when (input) {
             is SaveMagnetInput.Info -> db.torrentQueries.insert(
-                Torrent(input.value.hash.value, input.value.name, false)
+                Torrent(
+                    hash = input.value.hash.value,
+                    name = input.value.name,
+                    paused = true,
+                    sequential = false,
+                )
             )
 
             is SaveMagnetInput.Metadata,
             -> db.torrentQueries.insert(
-                Torrent(input.value.hash.value, input.value.name, false)
+                Torrent(
+                    hash = input.value.hash.value,
+                    name = input.value.name,
+                    paused = true,
+                    sequential = false,
+                )
             )
         }
     }

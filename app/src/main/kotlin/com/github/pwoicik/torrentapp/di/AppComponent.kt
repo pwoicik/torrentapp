@@ -17,6 +17,9 @@ import com.github.pwoicik.torrentapp.domain.usecase.SaveMagnetUseCase
 import com.github.pwoicik.torrentapp.ui.addtorrent.AddTorrent
 import com.github.pwoicik.torrentapp.ui.addtorrent.AddTorrentPresenter
 import com.github.pwoicik.torrentapp.ui.addtorrent.AddTorrentScreen
+import com.github.pwoicik.torrentapp.ui.main.MagnetInput
+import com.github.pwoicik.torrentapp.ui.main.MagnetInputPresenter
+import com.github.pwoicik.torrentapp.ui.main.MagnetInputScreen
 import com.github.pwoicik.torrentapp.ui.main.Main
 import com.github.pwoicik.torrentapp.ui.main.MainPresenter
 import com.github.pwoicik.torrentapp.ui.main.MainScreen
@@ -74,10 +77,13 @@ interface UiComponent {
     ) = Presenter.Factory { screen, navigator, _ ->
         when (screen) {
             is MainScreen,
-            -> presenterOf { MainPresenter(navigator, parseMagnet(), getTorrents()) }
+            -> presenterOf { MainPresenter(navigator, getTorrents()) }
 
             is SessionStatsScreen,
             -> presenterOf { SessionStatsPresenter(navigator, getSessionInfo()) }
+
+            is MagnetInputScreen,
+            -> presenterOf { MagnetInputPresenter(navigator, parseMagnet()) }
 
             else -> null
         }
@@ -93,6 +99,9 @@ interface UiComponent {
 
             is SessionStatsScreen,
             -> ui<SessionStatsScreen.State> { state, modifier -> SessionStats(state, modifier) }
+
+            is MagnetInputScreen,
+            -> ui<MagnetInputScreen.State> { state, modifier -> MagnetInput(state, modifier) }
 
             else -> null
         }
