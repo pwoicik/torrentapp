@@ -164,10 +164,10 @@ interface UiComponent {
     @[Provides IntoSet]
     fun settingsPresenterFactory(
         store: () -> DataStore<Settings>,
-    ) = Presenter.Factory { screen, navigator, _ ->
+    ) = Presenter.Factory { screen, _, _ ->
         when (screen) {
             is SettingsScreen,
-            -> presenterOf { SettingsPresenter(navigator, store()) }
+            -> presenterOf { SettingsPresenter(store()) }
 
             else -> null
         }

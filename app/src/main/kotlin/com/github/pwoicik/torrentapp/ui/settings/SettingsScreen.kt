@@ -4,6 +4,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Environment
 import android.provider.DocumentsContract
+import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -33,7 +34,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -47,12 +47,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.github.pwoicik.torrentapp.proto.Settings
 import com.github.pwoicik.torrentapp.ui.settings.SettingsScreen.Event
 import com.github.pwoicik.torrentapp.ui.settings.SettingsScreen.State
-import com.slack.circuit.foundation.internal.BackHandler
+import com.github.pwoicik.torrentapp.ui.util.OnDisposedEffect
 import com.slack.circuit.runtime.CircuitUiEvent
 import com.slack.circuit.runtime.CircuitUiState
-import com.slack.circuit.runtime.Navigator
 import com.slack.circuit.runtime.screen.Screen
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.parcelize.Parcelize
 
 @Parcelize
@@ -73,41 +72,36 @@ data object SettingsScreen : Screen {
         data class SaveLocationChanged(val value: Uri) : Event
         data object SequentialChanged : Event
         data object PrioritizeFirstLastChanged : Event
-        data object NavBack : Event
     }
 }
 
 @Composable
 fun SettingsPresenter(
-    navigator: Navigator,
     store: DataStore<Settings>,
 ): State {
     val settings = store.data.collectAsStateWithLifecycle(initialValue = null).value?.download
         ?: return State.Loading
     val context = LocalContext.current
-    val coroutineScope = rememberCoroutineScope()
     var saveLocation by remember { mutableStateOf(settings.savePath) }
     var sequential by remember { mutableStateOf(settings.sequential) }
     var prioritizeFirstLast by remember { mutableStateOf(settings.prioritizeFirstLast) }
+    @OptIn(DelicateCoroutinesApi::class) OnDisposedEffect {
+        store.updateData {
+            it.copy(
+                download = it.download.copy(
+                    savePath = saveLocation,
+                    sequential = sequential,
+                    prioritizeFirstLast = prioritizeFirstLast,
+                ),
+            )
+        }
+    }
     return State.Loaded(
         saveLocation = saveLocation,
         sequential = sequential,
         prioritizeFirstLast = prioritizeFirstLast,
     ) event@{ ev ->
         when (ev) {
-            Event.NavBack -> coroutineScope.launch {
-                store.updateData {
-                    it.copy(
-                        download = it.download.copy(
-                            savePath = saveLocation,
-                            sequential = sequential,
-                            prioritizeFirstLast = prioritizeFirstLast,
-                        ),
-                    )
-                }
-                navigator.pop()
-            }
-
             is Event.SaveLocationChanged -> {
                 // TODO: test on every android version
                 val id = DocumentsContract.getTreeDocumentId(ev.value)
@@ -143,7 +137,7 @@ fun SettingsContent(
             .fillMaxSize(),
     ) {
         if (uiState !is State.Loaded) return
-        BackHandler { uiState(Event.NavBack) }
+        val backDispatcher = LocalOnBackPressedDispatcherOwner.current?.onBackPressedDispatcher
         TopAppBar(
             title = {
                 Text(
@@ -152,7 +146,7 @@ fun SettingsContent(
                 )
             },
             navigationIcon = {
-                IconButton(onClick = { uiState(Event.NavBack) }) {
+                IconButton(onClick = { backDispatcher?.onBackPressed() }) {
                     Icon(
                         imageVector = Icons.Default.ArrowBackIosNew,
                         contentDescription = null,
