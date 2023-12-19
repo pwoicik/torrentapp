@@ -8,19 +8,21 @@ import app.cash.sqldelight.async.coroutines.synchronous
 import app.cash.sqldelight.driver.android.AndroidSqliteDriver
 import com.github.pwoicik.torrentapp.MainActivityDelegate
 import com.github.pwoicik.torrentapp.data.datastore.SettingsSerializer
+import com.github.pwoicik.torrentapp.data.usecase.GetDownloadSettingsUseCaseImpl
 import com.github.pwoicik.torrentapp.data.usecase.GetMagnetMetadataUseCaseImpl
 import com.github.pwoicik.torrentapp.data.usecase.GetSessionInfoUseCaseImpl
 import com.github.pwoicik.torrentapp.data.usecase.GetTorrentsUseCaseImpl
 import com.github.pwoicik.torrentapp.data.usecase.ParseMagnetUseCaseImpl
 import com.github.pwoicik.torrentapp.data.usecase.SaveMagnetUseCaseImpl
 import com.github.pwoicik.torrentapp.db.Database
+import com.github.pwoicik.torrentapp.domain.usecase.GetDownloadSettingsUseCase
 import com.github.pwoicik.torrentapp.domain.usecase.GetMagnetMetadataUseCase
 import com.github.pwoicik.torrentapp.domain.usecase.GetSessionInfoUseCase
 import com.github.pwoicik.torrentapp.domain.usecase.GetTorrentsUseCase
 import com.github.pwoicik.torrentapp.domain.usecase.ParseMagnetUseCase
 import com.github.pwoicik.torrentapp.domain.usecase.SaveMagnetUseCase
 import com.github.pwoicik.torrentapp.proto.Settings
-import com.github.pwoicik.torrentapp.ui.addtorrent.AddTorrent
+import com.github.pwoicik.torrentapp.ui.addtorrent.AddTorrentContent
 import com.github.pwoicik.torrentapp.ui.addtorrent.AddTorrentPresenter
 import com.github.pwoicik.torrentapp.ui.addtorrent.AddTorrentScreen
 import com.github.pwoicik.torrentapp.ui.main.MagnetInput
@@ -66,6 +68,9 @@ interface UseCaseComponent {
         @Provides get() = this
 
     val GetSessionInfoUseCaseImpl.bind: GetSessionInfoUseCase
+        @Provides get() = this
+
+    val GetDownloadSettingsUseCaseImpl.bind: GetDownloadSettingsUseCase
         @Provides get() = this
 }
 
@@ -122,11 +127,18 @@ interface UiComponent {
     fun addTorrentPresenterFactory(
         getMagnetMetadata: () -> GetMagnetMetadataUseCase,
         saveMagnet: () -> SaveMagnetUseCase,
+        getDownloadSettings: () -> GetDownloadSettingsUseCase,
     ) = Presenter.Factory { screen, navigator, _ ->
         when (screen) {
             is AddTorrentScreen,
             -> presenterOf {
-                AddTorrentPresenter(screen, navigator, getMagnetMetadata(), saveMagnet())
+                AddTorrentPresenter(
+                    screen,
+                    navigator,
+                    getMagnetMetadata(),
+                    saveMagnet(),
+                    getDownloadSettings()
+                )
             }
 
             else -> null
@@ -137,7 +149,13 @@ interface UiComponent {
     fun addTorrentUiFactory() = Ui.Factory { screen, _ ->
         when (screen) {
             is AddTorrentScreen,
-            -> ui<AddTorrentScreen.State> { state, modifier -> AddTorrent(screen, state, modifier) }
+            -> ui<AddTorrentScreen.State> { state, modifier ->
+                AddTorrentContent(
+                    screen,
+                    state,
+                    modifier
+                )
+            }
 
             else -> null
         }

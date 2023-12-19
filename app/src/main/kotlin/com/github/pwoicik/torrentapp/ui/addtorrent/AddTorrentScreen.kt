@@ -1,6 +1,5 @@
 package com.github.pwoicik.torrentapp.ui.addtorrent
 
-import android.os.Environment
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
@@ -47,17 +46,20 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import arrow.core.getOrElse
 import com.github.pwoicik.torrentapp.domain.model.MagnetInfo
 import com.github.pwoicik.torrentapp.domain.model.MagnetMetadata
+import com.github.pwoicik.torrentapp.domain.usecase.GetDownloadSettingsUseCase
 import com.github.pwoicik.torrentapp.domain.usecase.GetMagnetMetadataUseCase
 import com.github.pwoicik.torrentapp.domain.usecase.SaveMagnetInput
 import com.github.pwoicik.torrentapp.domain.usecase.SaveMagnetUseCase
+import com.github.pwoicik.torrentapp.domain.usecase.invoke
+import com.github.pwoicik.torrentapp.proto.Settings
 import com.github.pwoicik.torrentapp.ui.addtorrent.AddTorrentScreen.Event
+import com.github.pwoicik.torrentapp.ui.addtorrent.AddTorrentScreen.State
 import com.github.pwoicik.torrentapp.ui.util.formatSize
 import com.slack.circuit.runtime.CircuitUiEvent
 import com.slack.circuit.runtime.CircuitUiState
@@ -73,16 +75,20 @@ import java.time.format.DateTimeFormatter
 data class AddTorrentScreen(
     val magnet: MagnetInfo,
 ) : Screen {
-    data class State(
-        val metadata: MagnetMetadata?,
-        val startImmediately: Boolean,
-        val sequentialDownload: Boolean,
-        val prioritizeFirstAndLast: Boolean,
-        val downloadLocation: String,
-        val contentLayout: ContentLayout,
-        val event: (Event) -> Unit,
-    ) : CircuitUiState {
-        operator fun invoke(event: Event) = event(event)
+    sealed interface State : CircuitUiState {
+        data object Loading : State
+
+        data class Loaded(
+            val metadata: MagnetMetadata?,
+            val startImmediately: Boolean,
+            val sequentialDownload: Boolean,
+            val prioritizeFirstAndLast: Boolean,
+            val downloadLocation: String,
+            val contentLayout: ContentLayout,
+            val event: (Event) -> Unit,
+        ) : State {
+            operator fun invoke(event: Event) = event(event)
+        }
     }
 
     sealed interface Event : CircuitUiEvent {
@@ -108,24 +114,25 @@ fun AddTorrentPresenter(
     navigator: Navigator,
     getMagnetMetadata: GetMagnetMetadataUseCase,
     saveMagnet: SaveMagnetUseCase,
-): AddTorrentScreen.State {
-    val context = LocalContext.current
+    getDownloadSettings: GetDownloadSettingsUseCase,
+): State {
     val scope = rememberCoroutineScope()
     val metadata by produceState<MagnetMetadata?>(initialValue = null) {
         value = getMagnetMetadata(screen.magnet).getOrElse { TODO() }
     }
+    val settings = produceState<Settings.Download?>(initialValue = null) {
+        value = getDownloadSettings()
+    }.value ?: return State.Loading
     var startImmediately by remember { mutableStateOf(true) }
-    var sequentialDownload by remember { mutableStateOf(false) }
-    var prioritizeFirstAndLast by remember { mutableStateOf(false) }
+    var sequentialDownload by remember { mutableStateOf(settings.sequential) }
+    var prioritizeFirstAndLast by remember { mutableStateOf(settings.prioritizeFirstLast) }
     var contentLayout by remember { mutableStateOf(ContentLayout.Original) }
-    return AddTorrentScreen.State(
+    return State.Loaded(
         metadata = metadata,
         startImmediately = startImmediately,
         sequentialDownload = sequentialDownload,
         prioritizeFirstAndLast = prioritizeFirstAndLast,
-        downloadLocation = context
-            .getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)!!
-            .absolutePath,
+        downloadLocation = settings.savePath,
         contentLayout = contentLayout,
     ) {
         when (it) {
@@ -159,9 +166,9 @@ fun AddTorrentPresenter(
 }
 
 @Composable
-fun AddTorrent(
+fun AddTorrentContent(
     screen: AddTorrentScreen,
-    uiState: AddTorrentScreen.State,
+    uiState: State,
     modifier: Modifier = Modifier,
 ) {
     Box(
@@ -169,6 +176,7 @@ fun AddTorrent(
             .background(MaterialTheme.colorScheme.background)
             .fillMaxSize(),
     ) {
+        if (uiState !is State.Loaded) return
         FloatingActionButton(
             onClick = { uiState(Event.DownloadClicked) },
             modifier = Modifier
@@ -282,7 +290,9 @@ private fun DirectoryPicker(
             Icon(imageVector = Icons.Default.Folder, contentDescription = null)
         },
         interactionSource = interactionSource,
-        modifier = Modifier.padding(12.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(12.dp),
     )
     LaunchedEffect(Unit) {
         interactionSource.interactions.collect {
