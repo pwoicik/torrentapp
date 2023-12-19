@@ -1,18 +1,19 @@
 package com.github.pwoicik.torrentapp.di
 
-import androidx.datastore.core.DataStore
 import androidx.datastore.core.DataStoreFactory
 import androidx.datastore.core.okio.OkioStorage
 import androidx.datastore.dataStoreFile
 import app.cash.sqldelight.async.coroutines.synchronous
 import app.cash.sqldelight.driver.android.AndroidSqliteDriver
 import com.github.pwoicik.torrentapp.MainActivityDelegate
+import com.github.pwoicik.torrentapp.data.datastore.SettingsDataStore
 import com.github.pwoicik.torrentapp.data.datastore.SettingsSerializer
 import com.github.pwoicik.torrentapp.data.usecase.GetDownloadSettingsUseCaseImpl
 import com.github.pwoicik.torrentapp.data.usecase.GetMagnetMetadataUseCaseImpl
 import com.github.pwoicik.torrentapp.data.usecase.GetSessionInfoUseCaseImpl
 import com.github.pwoicik.torrentapp.data.usecase.GetTorrentsUseCaseImpl
 import com.github.pwoicik.torrentapp.data.usecase.ParseMagnetUseCaseImpl
+import com.github.pwoicik.torrentapp.data.usecase.SaveDownloadSettingsUseCaseImpl
 import com.github.pwoicik.torrentapp.data.usecase.SaveMagnetUseCaseImpl
 import com.github.pwoicik.torrentapp.db.Database
 import com.github.pwoicik.torrentapp.domain.usecase.GetDownloadSettingsUseCase
@@ -20,8 +21,8 @@ import com.github.pwoicik.torrentapp.domain.usecase.GetMagnetMetadataUseCase
 import com.github.pwoicik.torrentapp.domain.usecase.GetSessionInfoUseCase
 import com.github.pwoicik.torrentapp.domain.usecase.GetTorrentsUseCase
 import com.github.pwoicik.torrentapp.domain.usecase.ParseMagnetUseCase
+import com.github.pwoicik.torrentapp.domain.usecase.SaveDownloadSettingsUseCase
 import com.github.pwoicik.torrentapp.domain.usecase.SaveMagnetUseCase
-import com.github.pwoicik.torrentapp.proto.Settings
 import com.github.pwoicik.torrentapp.ui.addtorrent.AddTorrentContent
 import com.github.pwoicik.torrentapp.ui.addtorrent.AddTorrentPresenter
 import com.github.pwoicik.torrentapp.ui.addtorrent.AddTorrentScreen
@@ -71,6 +72,9 @@ interface UseCaseComponent {
         @Provides get() = this
 
     val GetDownloadSettingsUseCaseImpl.bind: GetDownloadSettingsUseCase
+        @Provides get() = this
+
+    val SaveDownloadSettingsUseCaseImpl.bind: SaveDownloadSettingsUseCase
         @Provides get() = this
 }
 
@@ -163,11 +167,12 @@ interface UiComponent {
 
     @[Provides IntoSet]
     fun settingsPresenterFactory(
-        store: () -> DataStore<Settings>,
+        getDownloadSettings: () -> GetDownloadSettingsUseCase,
+        saveDownloadSettings: () -> SaveDownloadSettingsUseCase,
     ) = Presenter.Factory { screen, _, _ ->
         when (screen) {
             is SettingsScreen,
-            -> presenterOf { SettingsPresenter(store()) }
+            -> presenterOf { SettingsPresenter(getDownloadSettings(), saveDownloadSettings()) }
 
             else -> null
         }
@@ -198,7 +203,7 @@ interface DataComponent {
 
     @AppScope
     @Provides
-    fun datastore(context: ApplicationContext): DataStore<Settings> = DataStoreFactory.create(
+    fun datastore(context: ApplicationContext): SettingsDataStore = DataStoreFactory.create(
         storage = OkioStorage(
             fileSystem = FileSystem.SYSTEM,
             serializer = SettingsSerializer,

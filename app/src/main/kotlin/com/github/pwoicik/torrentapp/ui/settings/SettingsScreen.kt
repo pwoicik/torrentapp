@@ -42,8 +42,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.LineBreak
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.datastore.core.DataStore
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.github.pwoicik.torrentapp.domain.usecase.GetDownloadSettingsUseCase
+import com.github.pwoicik.torrentapp.domain.usecase.SaveDownloadSettingsUseCase
+import com.github.pwoicik.torrentapp.domain.usecase.invoke
 import com.github.pwoicik.torrentapp.proto.Settings
 import com.github.pwoicik.torrentapp.ui.settings.SettingsScreen.Event
 import com.github.pwoicik.torrentapp.ui.settings.SettingsScreen.State
@@ -77,24 +79,23 @@ data object SettingsScreen : Screen {
 
 @Composable
 fun SettingsPresenter(
-    store: DataStore<Settings>,
+    getDownloadSettings: GetDownloadSettingsUseCase,
+    saveDownloadSettings: SaveDownloadSettingsUseCase,
 ): State {
-    val settings = store.data.collectAsStateWithLifecycle(initialValue = null).value?.download
+    val settings = getDownloadSettings().collectAsStateWithLifecycle(initialValue = null).value
         ?: return State.Loading
     val context = LocalContext.current
     var saveLocation by remember { mutableStateOf(settings.savePath) }
     var sequential by remember { mutableStateOf(settings.sequential) }
     var prioritizeFirstLast by remember { mutableStateOf(settings.prioritizeFirstLast) }
     @OptIn(DelicateCoroutinesApi::class) OnDisposedEffect {
-        store.updateData {
-            it.copy(
-                download = it.download.copy(
-                    savePath = saveLocation,
-                    sequential = sequential,
-                    prioritizeFirstLast = prioritizeFirstLast,
-                ),
+        saveDownloadSettings(
+            Settings.Download(
+                savePath = saveLocation,
+                sequential = sequential,
+                prioritizeFirstLast = prioritizeFirstLast,
             )
-        }
+        )
     }
     return State.Loaded(
         saveLocation = saveLocation,

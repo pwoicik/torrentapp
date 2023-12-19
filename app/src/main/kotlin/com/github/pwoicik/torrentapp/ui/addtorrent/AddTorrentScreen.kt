@@ -65,6 +65,7 @@ import com.slack.circuit.runtime.CircuitUiEvent
 import com.slack.circuit.runtime.CircuitUiState
 import com.slack.circuit.runtime.Navigator
 import com.slack.circuit.runtime.screen.Screen
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.parcelize.Parcelize
 import java.time.LocalDateTime
@@ -121,7 +122,7 @@ fun AddTorrentPresenter(
         value = getMagnetMetadata(screen.magnet).getOrElse { TODO() }
     }
     val settings = produceState<Settings.Download?>(initialValue = null) {
-        value = getDownloadSettings()
+        value = getDownloadSettings().first()
     }.value ?: return State.Loading
     var startImmediately by remember { mutableStateOf(true) }
     var sequentialDownload by remember { mutableStateOf(settings.sequential) }
