@@ -47,7 +47,8 @@
         <service
             android:name=".TorrentService"
             android:exported="false"
-            android:foregroundServiceType="dataSync" />
+            android:foregroundServiceType="dataSync"
+            android:label="Torrent Service" />
     </application>
 
 </manifest>
