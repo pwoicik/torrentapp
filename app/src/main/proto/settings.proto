@@ -1,0 +1,14 @@
+syntax = "proto2";
+
+option java_package = "com.github.pwoicik.torrentapp.proto";
+option java_multiple_files = true;
+
+message Settings {
+  message Download {
+    required string savePath = 1;
+    required bool sequential = 2;
+    required bool prioritizeFirstLast = 3;
+  }
+
+  required Download download = 1;
+}

@@ -4,3 +4,6 @@
 #
 # For more details, see
 #   http://developer.android.com/guide/developing/tools/proguard.html
+
+-keep class com.squareup.wire.** { *; }
+-keep class com.github.pwoicik.torrentapp.proto.** { *; }

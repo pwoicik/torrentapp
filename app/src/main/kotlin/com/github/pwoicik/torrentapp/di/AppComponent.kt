@@ -1,8 +1,13 @@
 package com.github.pwoicik.torrentapp.di
 
+import androidx.datastore.core.DataStore
+import androidx.datastore.core.DataStoreFactory
+import androidx.datastore.core.okio.OkioStorage
+import androidx.datastore.dataStoreFile
 import app.cash.sqldelight.async.coroutines.synchronous
 import app.cash.sqldelight.driver.android.AndroidSqliteDriver
 import com.github.pwoicik.torrentapp.MainActivityDelegate
+import com.github.pwoicik.torrentapp.data.datastore.SettingsSerializer
 import com.github.pwoicik.torrentapp.data.usecase.GetMagnetMetadataUseCaseImpl
 import com.github.pwoicik.torrentapp.data.usecase.GetSessionInfoUseCaseImpl
 import com.github.pwoicik.torrentapp.data.usecase.GetTorrentsUseCaseImpl
@@ -14,18 +19,22 @@ import com.github.pwoicik.torrentapp.domain.usecase.GetSessionInfoUseCase
 import com.github.pwoicik.torrentapp.domain.usecase.GetTorrentsUseCase
 import com.github.pwoicik.torrentapp.domain.usecase.ParseMagnetUseCase
 import com.github.pwoicik.torrentapp.domain.usecase.SaveMagnetUseCase
+import com.github.pwoicik.torrentapp.proto.Settings
 import com.github.pwoicik.torrentapp.ui.addtorrent.AddTorrent
 import com.github.pwoicik.torrentapp.ui.addtorrent.AddTorrentPresenter
 import com.github.pwoicik.torrentapp.ui.addtorrent.AddTorrentScreen
 import com.github.pwoicik.torrentapp.ui.main.MagnetInput
 import com.github.pwoicik.torrentapp.ui.main.MagnetInputPresenter
 import com.github.pwoicik.torrentapp.ui.main.MagnetInputScreen
-import com.github.pwoicik.torrentapp.ui.main.Main
+import com.github.pwoicik.torrentapp.ui.main.MainContent
 import com.github.pwoicik.torrentapp.ui.main.MainPresenter
 import com.github.pwoicik.torrentapp.ui.main.MainScreen
 import com.github.pwoicik.torrentapp.ui.main.SessionStats
 import com.github.pwoicik.torrentapp.ui.main.SessionStatsPresenter
 import com.github.pwoicik.torrentapp.ui.main.SessionStatsScreen
+import com.github.pwoicik.torrentapp.ui.settings.SettingsContent
+import com.github.pwoicik.torrentapp.ui.settings.SettingsPresenter
+import com.github.pwoicik.torrentapp.ui.settings.SettingsScreen
 import com.slack.circuit.foundation.Circuit
 import com.slack.circuit.runtime.presenter.Presenter
 import com.slack.circuit.runtime.presenter.presenterOf
@@ -35,6 +44,8 @@ import me.tatarka.inject.annotations.Component
 import me.tatarka.inject.annotations.IntoSet
 import me.tatarka.inject.annotations.Provides
 import me.tatarka.inject.annotations.Scope
+import okio.FileSystem
+import okio.Path.Companion.toPath
 import org.libtorrent4j.SessionManager
 
 @Scope
@@ -95,7 +106,7 @@ interface UiComponent {
     ) = Ui.Factory { screen, _ ->
         when (screen) {
             is MainScreen,
-            -> ui<MainScreen.State> { state, modifier -> Main(state, modifier) }
+            -> ui<MainScreen.State> { state, modifier -> MainContent(state, modifier) }
 
             is SessionStatsScreen,
             -> ui<SessionStatsScreen.State> { state, modifier -> SessionStats(state, modifier) }
@@ -115,12 +126,7 @@ interface UiComponent {
         when (screen) {
             is AddTorrentScreen,
             -> presenterOf {
-                AddTorrentPresenter(
-                    screen,
-                    navigator,
-                    getMagnetMetadata(),
-                    saveMagnet()
-                )
+                AddTorrentPresenter(screen, navigator, getMagnetMetadata(), saveMagnet())
             }
 
             else -> null
@@ -136,17 +142,31 @@ interface UiComponent {
             else -> null
         }
     }
+
+    @[Provides IntoSet]
+    fun settingsPresenterFactory(
+        store: () -> DataStore<Settings>,
+    ) = Presenter.Factory { screen, navigator, _ ->
+        when (screen) {
+            is SettingsScreen,
+            -> presenterOf { SettingsPresenter(navigator, store()) }
+
+            else -> null
+        }
+    }
+
+    @[Provides IntoSet]
+    fun settingsUiFactory() = Ui.Factory { screen, _ ->
+        when (screen) {
+            is SettingsScreen,
+            -> ui<SettingsScreen.State> { state, modifier -> SettingsContent(state, modifier) }
+
+            else -> null
+        }
+    }
 }
 
-interface NetComponent {
-    @AppScope
-    @Provides
-    fun torrentSession() = SessionManager(false)
-
-    val sessionManager: SessionManager
-}
-
-interface DbComponent {
+interface DataComponent {
     @AppScope
     @Provides
     fun database(context: ApplicationContext) = Database(
@@ -157,12 +177,27 @@ interface DbComponent {
             useNoBackupDirectory = true,
         ),
     )
+
+    @AppScope
+    @Provides
+    fun datastore(context: ApplicationContext): DataStore<Settings> = DataStoreFactory.create(
+        storage = OkioStorage(
+            fileSystem = FileSystem.SYSTEM,
+            serializer = SettingsSerializer,
+        ) { context.dataStoreFile("settings.pb").absolutePath.toPath() },
+    )
+
+    @AppScope
+    @Provides
+    fun torrentSession() = SessionManager(false)
+
+    val sessionManager: SessionManager
 }
 
 @AppScope
 @Component
 abstract class AppComponent(
     @get:Provides protected val context: ApplicationContext,
-) : UiComponent, DbComponent, NetComponent, UseCaseComponent {
+) : UiComponent, DataComponent, UseCaseComponent {
     abstract val mainActivityDelegate: MainActivityDelegate
 }

@@ -5,7 +5,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -17,6 +16,7 @@ import androidx.compose.material.icons.filled.AddLink
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.outlined.MonitorHeart
 import androidx.compose.material.icons.outlined.PowerOff
+import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -42,6 +42,7 @@ import com.github.pwoicik.torrentapp.domain.model.SavedTorrent
 import com.github.pwoicik.torrentapp.domain.usecase.GetTorrentsUseCase
 import com.github.pwoicik.torrentapp.domain.usecase.invoke
 import com.github.pwoicik.torrentapp.ui.main.MainScreen.Event
+import com.github.pwoicik.torrentapp.ui.settings.SettingsScreen
 import com.slack.circuit.foundation.CircuitContent
 import com.slack.circuit.foundation.NavEvent
 import com.slack.circuit.foundation.onNavEvent
@@ -81,13 +82,12 @@ fun MainPresenter(
 }
 
 @Composable
-fun Main(
+fun MainContent(
     uiState: MainScreen.State,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
     Scaffold(
-        contentWindowInsets = WindowInsets(0),
         topBar = {
             TopAppBar(
                 title = { Text(text = "Torrent App") },
@@ -104,6 +104,14 @@ fun Main(
                     ) {
                         Icon(
                             imageVector = Icons.Outlined.PowerOff,
+                            contentDescription = null,
+                        )
+                    }
+                    IconButton(
+                        onClick = { uiState(Event.ChildNav(NavEvent.GoTo(SettingsScreen))) },
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Settings,
                             contentDescription = null,
                         )
                     }

@@ -5,6 +5,7 @@ plugins {
     alias(libs.plugins.kgp)
     alias(libs.plugins.ksp)
     alias(libs.plugins.sqldelight)
+    alias(libs.plugins.wire)
     id("kotlin-parcelize")
 }
 
@@ -115,6 +116,10 @@ sqldelight {
     }
 }
 
+wire {
+    kotlin {}
+}
+
 dependencies {
     coreLibraryDesugaring(libs.desugaring)
     implementation(libs.android.core)
@@ -155,4 +160,6 @@ dependencies {
 
     implementation(libs.arrow)
     implementation(libs.arrow.coroutines)
+
+    implementation(libs.datastore)
 }
