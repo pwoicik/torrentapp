@@ -31,10 +31,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -46,14 +44,12 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.github.pwoicik.torrentapp.domain.usecase.GetDownloadSettingsUseCase
 import com.github.pwoicik.torrentapp.domain.usecase.SaveDownloadSettingsUseCase
 import com.github.pwoicik.torrentapp.domain.usecase.invoke
-import com.github.pwoicik.torrentapp.proto.Settings
 import com.github.pwoicik.torrentapp.ui.settings.SettingsScreen.Event
 import com.github.pwoicik.torrentapp.ui.settings.SettingsScreen.State
-import com.github.pwoicik.torrentapp.ui.util.OnDisposedEffect
 import com.slack.circuit.runtime.CircuitUiEvent
 import com.slack.circuit.runtime.CircuitUiState
 import com.slack.circuit.runtime.screen.Screen
-import kotlinx.coroutines.DelicateCoroutinesApi
+import kotlinx.coroutines.launch
 import kotlinx.parcelize.Parcelize
 
 @Parcelize
@@ -85,33 +81,25 @@ fun SettingsPresenter(
     val settings = getDownloadSettings().collectAsStateWithLifecycle(initialValue = null).value
         ?: return State.Loading
     val context = LocalContext.current
-    var saveLocation by remember { mutableStateOf(settings.savePath) }
-    var sequential by remember { mutableStateOf(settings.sequential) }
-    var prioritizeFirstLast by remember { mutableStateOf(settings.prioritizeFirstLast) }
-    @OptIn(DelicateCoroutinesApi::class)
-    OnDisposedEffect {
-        saveDownloadSettings(
-            Settings.Download(
-                savePath = saveLocation,
-                sequential = sequential,
-                prioritizeFirstLast = prioritizeFirstLast,
-            ),
-        )
-    }
+    val coroutineScope = rememberCoroutineScope()
     return State.Loaded(
-        saveLocation = saveLocation,
-        sequential = sequential,
-        prioritizeFirstLast = prioritizeFirstLast,
+        saveLocation = settings.savePath,
+        sequential = settings.sequential,
+        prioritizeFirstLast = settings.prioritizeFirstLast,
     ) event@{ ev ->
         when (ev) {
-            is Event.SaveLocationChanged -> {
+            is Event.SaveLocationChanged -> coroutineScope.launch {
                 // TODO: test on every android version
                 val id = DocumentsContract.getTreeDocumentId(ev.value)
-                saveLocation = Environment.getExternalStorageDirectory()
-                    .resolve(id.substringAfter(':'))
-                    .takeIf { it.exists() }
-                    ?.absolutePath
-                    ?: return@event
+                saveDownloadSettings(
+                    settings.copy(
+                        savePath = Environment.getExternalStorageDirectory()
+                            .resolve(id.substringAfter(':'))
+                            .takeIf { it.exists() }
+                            ?.absolutePath
+                            ?: return@launch,
+                    ),
+                )
                 context.contentResolver.takePersistableUriPermission(
                     ev.value,
                     Intent.FLAG_GRANT_READ_URI_PERMISSION
@@ -119,11 +107,17 @@ fun SettingsPresenter(
                 )
             }
 
-            Event.PrioritizeFirstLastChanged,
-            -> prioritizeFirstLast = !prioritizeFirstLast
+            Event.PrioritizeFirstLastChanged -> coroutineScope.launch {
+                saveDownloadSettings(
+                    settings.copy(prioritizeFirstLast = !settings.prioritizeFirstLast),
+                )
+            }
 
-            Event.SequentialChanged,
-            -> sequential = !sequential
+            Event.SequentialChanged -> coroutineScope.launch {
+                saveDownloadSettings(
+                    settings.copy(sequential = !settings.sequential),
+                )
+            }
         }
     }
 }
