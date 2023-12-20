@@ -84,7 +84,7 @@ data class AddTorrentScreen(
             val startImmediately: Boolean,
             val sequentialDownload: Boolean,
             val prioritizeFirstAndLast: Boolean,
-            val downloadLocation: String,
+            val savePath: String,
             val contentLayout: ContentLayout,
             val event: (Event) -> Unit,
         ) : State {
@@ -132,7 +132,7 @@ fun AddTorrentPresenter(
         startImmediately = startImmediately,
         sequentialDownload = sequentialDownload,
         prioritizeFirstAndLast = prioritizeFirstAndLast,
-        downloadLocation = settings.savePath,
+        savePath = settings.savePath,
         contentLayout = contentLayout,
     ) {
         when (it) {
@@ -157,6 +157,10 @@ fun AddTorrentPresenter(
                     SaveMagnetInput(
                         info = screen.magnet,
                         metadata = metadata,
+                        startImmediately = startImmediately,
+                        sequential = sequentialDownload,
+                        prioritizeFirstAndLast = prioritizeFirstAndLast,
+                        savePath = settings.savePath,
                     ),
                 )
                 navigator.pop()
@@ -229,7 +233,7 @@ fun AddTorrentContent(
                 label = "Download first and last pieces first",
             )
             DirectoryPicker(
-                selected = uiState.downloadLocation,
+                selected = uiState.savePath,
             )
             ContentLayoutPicker(
                 selected = uiState.contentLayout,

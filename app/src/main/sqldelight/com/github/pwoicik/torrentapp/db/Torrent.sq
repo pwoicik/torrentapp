@@ -4,7 +4,8 @@ CREATE TABLE torrent (
     hash TEXT PRIMARY KEY,
     name TEXT NOT NULL,
     paused INTEGER AS Boolean NOT NULL,
-    sequential INTEGER AS Boolean NOT NULL
+    sequential INTEGER AS Boolean NOT NULL,
+    savePath TEXT NOT NULL
 ) WITHOUT ROWID;
 
 CREATE INDEX torrent_hash ON torrent(hash);

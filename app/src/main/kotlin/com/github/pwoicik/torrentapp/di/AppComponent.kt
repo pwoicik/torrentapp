@@ -17,6 +17,7 @@ import com.github.pwoicik.torrentapp.data.datastore.SettingsSerializer
 import com.github.pwoicik.torrentapp.data.usecase.GetDownloadSettingsUseCaseImpl
 import com.github.pwoicik.torrentapp.data.usecase.GetMagnetMetadataUseCaseImpl
 import com.github.pwoicik.torrentapp.data.usecase.GetSessionInfoUseCaseImpl
+import com.github.pwoicik.torrentapp.data.usecase.GetTorrentTransferStatsUseCaseImpl
 import com.github.pwoicik.torrentapp.data.usecase.GetTorrentsUseCaseImpl
 import com.github.pwoicik.torrentapp.data.usecase.ParseMagnetUseCaseImpl
 import com.github.pwoicik.torrentapp.data.usecase.SaveDownloadSettingsUseCaseImpl
@@ -25,6 +26,7 @@ import com.github.pwoicik.torrentapp.db.Database
 import com.github.pwoicik.torrentapp.domain.usecase.GetDownloadSettingsUseCase
 import com.github.pwoicik.torrentapp.domain.usecase.GetMagnetMetadataUseCase
 import com.github.pwoicik.torrentapp.domain.usecase.GetSessionInfoUseCase
+import com.github.pwoicik.torrentapp.domain.usecase.GetTorrentTransferStatsUseCase
 import com.github.pwoicik.torrentapp.domain.usecase.GetTorrentsUseCase
 import com.github.pwoicik.torrentapp.domain.usecase.ParseMagnetUseCase
 import com.github.pwoicik.torrentapp.domain.usecase.SaveDownloadSettingsUseCase
@@ -85,6 +87,9 @@ interface UseCaseComponent {
 
     val SaveDownloadSettingsUseCaseImpl.bind: SaveDownloadSettingsUseCase
         @Provides get() = this
+
+    val GetTorrentTransferStatsUseCaseImpl.bind: GetTorrentTransferStatsUseCase
+        @Provides get() = this
 }
 
 interface UiComponent {
@@ -117,11 +122,13 @@ interface UiComponent {
     }
 
     @[Provides IntoSet]
-    fun mainUiFactory(session: () -> SessionManager) =
+    fun mainUiFactory(getTorrentTransferStats: () -> GetTorrentTransferStatsUseCase) =
         Ui.Factory { screen, _ ->
             when (screen) {
                 is MainScreen,
-                -> ui<MainScreen.State> { state, modifier -> MainContent(state, modifier) }
+                -> ui<MainScreen.State> { state, modifier ->
+                    MainContent(state, getTorrentTransferStats(), modifier)
+                }
 
                 is SessionStatsScreen,
                 -> ui<SessionStatsScreen.State> { state, modifier -> SessionStats(state, modifier) }

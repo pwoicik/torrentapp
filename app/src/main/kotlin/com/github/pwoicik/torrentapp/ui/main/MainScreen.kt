@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -22,12 +23,14 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -35,14 +38,18 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextMotion
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.github.pwoicik.torrentapp.ApplicationConstants
 import com.github.pwoicik.torrentapp.domain.model.SavedTorrent
+import com.github.pwoicik.torrentapp.domain.model.TorrentTransferStats
+import com.github.pwoicik.torrentapp.domain.usecase.GetTorrentTransferStatsUseCase
 import com.github.pwoicik.torrentapp.domain.usecase.GetTorrentsUseCase
 import com.github.pwoicik.torrentapp.domain.usecase.invoke
 import com.github.pwoicik.torrentapp.ui.main.MainScreen.Event
 import com.github.pwoicik.torrentapp.ui.settings.SettingsScreen
+import com.github.pwoicik.torrentapp.ui.util.formatSpeed
 import com.slack.circuit.foundation.CircuitContent
 import com.slack.circuit.foundation.NavEvent
 import com.slack.circuit.foundation.onNavEvent
@@ -79,7 +86,11 @@ fun MainPresenter(navigator: Navigator, getTorrents: GetTorrentsUseCase): MainSc
 }
 
 @Composable
-fun MainContent(uiState: MainScreen.State, modifier: Modifier = Modifier) {
+fun MainContent(
+    uiState: MainScreen.State,
+    getTorrentTransferStats: GetTorrentTransferStatsUseCase,
+    modifier: Modifier = Modifier,
+) {
     val context = LocalContext.current
     Scaffold(
         topBar = {
@@ -117,14 +128,23 @@ fun MainContent(uiState: MainScreen.State, modifier: Modifier = Modifier) {
     ) { innerPadding ->
         LazyColumn(contentPadding = innerPadding) {
             items(uiState.torrents.orEmpty()) {
-                Torrent(it)
+                Torrent(
+                    torrent = it,
+                    stats = getTorrentTransferStats(it.hash)
+                        .collectAsStateWithLifecycle(TorrentTransferStats())
+                        .value,
+                )
             }
         }
     }
 }
 
 @Composable
-private fun Torrent(torrent: SavedTorrent, modifier: Modifier = Modifier) {
+private fun Torrent(
+    torrent: SavedTorrent,
+    stats: TorrentTransferStats,
+    modifier: Modifier = Modifier,
+) {
     Row(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         modifier = modifier.padding(12.dp, 12.dp, 18.dp, 12.dp),
@@ -146,12 +166,32 @@ private fun Torrent(torrent: SavedTorrent, modifier: Modifier = Modifier) {
             )
         }
         Column(
-            verticalArrangement = Arrangement.spacedBy(4.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Text(torrent.name)
             LinearProgressIndicator(
+                progress = { stats.progress },
                 modifier = Modifier.fillMaxWidth(),
             )
+            CompositionLocalProvider(
+                LocalTextStyle provides MaterialTheme.typography.bodySmall,
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = "↓ %s  ↑ %s".format(
+                            stats.downloadSpeed.formatSpeed(),
+                            stats.uploadSpeed.formatSpeed(),
+                        ),
+                    )
+                    Spacer(Modifier.weight(1f))
+                    Text(
+                        text = "%.2f%%".format(stats.progress * 100),
+                        style = LocalTextStyle.current.copy(textMotion = TextMotion.Static),
+                    )
+                }
+            }
         }
     }
 }

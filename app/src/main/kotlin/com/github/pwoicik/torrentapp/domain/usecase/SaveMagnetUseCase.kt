@@ -8,4 +8,8 @@ typealias SaveMagnetUseCase = SuspendUseCase<SaveMagnetInput, Unit>
 data class SaveMagnetInput(
     val info: MagnetInfo,
     val metadata: MagnetMetadata? = null,
+    val startImmediately: Boolean,
+    val sequential: Boolean,
+    val prioritizeFirstAndLast: Boolean,
+    val savePath: String,
 )
