@@ -17,19 +17,22 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.getSystemService
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
-import com.github.pwoicik.torrentapp.di.inject
 import com.github.pwoicik.torrentapp.ui.util.formatSpeed
 import com.github.pwoicik.torrentapp.ui.util.toByteSize
 import com.github.pwoicik.torrentapp.util.registerReceiver
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import me.tatarka.inject.annotations.Inject
 import org.libtorrent4j.AlertListener
+import org.libtorrent4j.SessionManager
 import org.libtorrent4j.alerts.Alert
 import kotlin.time.Duration.Companion.seconds
 
-class TorrentService : LifecycleService() {
-    private val sessionManager by inject { sessionManager }
+@Inject
+class TorrentService(
+    private val sessionManager: SessionManager,
+) : LifecycleService() {
     private lateinit var finishReceiver: BroadcastReceiver
     private lateinit var wakeLock: PowerManager.WakeLock
 

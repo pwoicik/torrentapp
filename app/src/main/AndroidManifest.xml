@@ -11,6 +11,7 @@
     <application
         android:name=".App"
         android:allowBackup="true"
+        android:appComponentFactory="com.github.pwoicik.torrentapp.di.AppComponentFactory"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:enableOnBackInvokedCallback="true"
         android:fullBackupContent="@xml/backup_rules"
@@ -19,7 +20,9 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.TorrentApp"
+        tools:replace="android:appComponentFactory"
         tools:targetApi="34">
+
         <activity
             android:name=".MainActivity"
             android:configChanges="uiMode|touchscreen|smallestScreenSize|screenSize|screenLayout|orientation|navigation|mnc|mcc|locale|layoutDirection|keyboardHidden|keyboard|grammaticalGender|fontWeightAdjustment|fontScale|density|colorMode"
@@ -49,6 +52,18 @@
             android:exported="false"
             android:foregroundServiceType="dataSync"
             android:label="Torrent Service" />
+
+        <provider
+            android:name="androidx.startup.InitializationProvider"
+            android:authorities="${applicationId}.androidx-startup"
+            android:exported="false"
+            tools:node="merge">
+
+            <meta-data
+                android:name="androidx.work.WorkManagerInitializer"
+                android:value="androidx.startup"
+                tools:node="remove" />
+        </provider>
     </application>
 
 </manifest>

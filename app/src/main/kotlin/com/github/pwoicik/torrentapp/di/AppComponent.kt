@@ -1,11 +1,17 @@
 package com.github.pwoicik.torrentapp.di
 
+import android.app.Activity
+import android.app.Service
+import android.content.Context
 import androidx.datastore.core.DataStoreFactory
 import androidx.datastore.core.okio.OkioStorage
 import androidx.datastore.dataStoreFile
+import androidx.work.ListenableWorker
+import androidx.work.WorkerParameters
 import app.cash.sqldelight.async.coroutines.synchronous
 import app.cash.sqldelight.driver.android.AndroidSqliteDriver
-import com.github.pwoicik.torrentapp.MainActivityDelegate
+import com.github.pwoicik.torrentapp.MainActivity
+import com.github.pwoicik.torrentapp.TorrentService
 import com.github.pwoicik.torrentapp.data.datastore.SettingsDataStore
 import com.github.pwoicik.torrentapp.data.datastore.SettingsSerializer
 import com.github.pwoicik.torrentapp.data.usecase.GetDownloadSettingsUseCaseImpl
@@ -45,12 +51,14 @@ import com.slack.circuit.runtime.ui.Ui
 import com.slack.circuit.runtime.ui.ui
 import kotlinx.coroutines.Dispatchers
 import me.tatarka.inject.annotations.Component
+import me.tatarka.inject.annotations.IntoMap
 import me.tatarka.inject.annotations.IntoSet
 import me.tatarka.inject.annotations.Provides
 import me.tatarka.inject.annotations.Scope
 import okio.FileSystem
 import okio.Path.Companion.toPath
 import org.libtorrent4j.SessionManager
+import kotlin.reflect.KClass
 
 @Scope
 @Target(AnnotationTarget.CLASS, AnnotationTarget.FUNCTION, AnnotationTarget.PROPERTY_GETTER)
@@ -219,13 +227,29 @@ interface DataComponent {
     val sessionManager: SessionManager
 }
 
+private typealias ActivityBinding = Pair<KClass<out Activity>, () -> Activity>
+private typealias ServiceBinding = Pair<KClass<out Service>, () -> Service>
+
+interface AndroidComponent {
+    @[Provides IntoMap]
+    fun mainActivity(provider: () -> MainActivity): ActivityBinding =
+        MainActivity::class to provider
+
+    @[Provides IntoMap]
+    fun torrentService(provider: () -> TorrentService): ServiceBinding =
+        TorrentService::class to provider
+
+    val activities: Map<KClass<out Activity>, () -> Activity>
+    val services: Map<KClass<out Service>, () -> Service>
+    val workers: Map<KClass<out ListenableWorker>, (Context, WorkerParameters) -> ListenableWorker>
+        get() = emptyMap()
+}
+
 @AppScope
 @Component
 abstract class AppComponent(
     @get:Provides protected val context: ApplicationContext,
-) : UiComponent, DataComponent, UseCaseComponent {
-    abstract val mainActivityDelegate: MainActivityDelegate
-
+) : UiComponent, DataComponent, UseCaseComponent, AndroidComponent {
     @Provides
     protected fun mainDispatcher(): MainDispatcher = Dispatchers.Main
 

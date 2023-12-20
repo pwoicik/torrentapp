@@ -15,7 +15,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
-import com.github.pwoicik.torrentapp.di.inject
 import com.github.pwoicik.torrentapp.domain.model.MagnetInfo
 import com.github.pwoicik.torrentapp.domain.usecase.ParseMagnetUseCase
 import com.github.pwoicik.torrentapp.ui.addtorrent.AddTorrentScreen
@@ -33,22 +32,24 @@ import com.slack.circuitx.android.rememberAndroidScreenAwareNavigator
 import com.slack.circuitx.gesturenavigation.GestureNavigationDecoration
 import me.tatarka.inject.annotations.Inject
 
-class MainActivity : ComponentActivity() {
-    private val delegate by inject { mainActivityDelegate }
-
+@Inject
+class MainActivity(
+    private val circuit: Circuit,
+    private val parseMagnet: ParseMagnetUseCase,
+) : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         startService(Intent(this, TorrentService::class.java))
         registerFinishReceiver()
-        delegate.onIntent(intent)
+        onIntent(intent)
 
         WindowCompat.setDecorFitsSystemWindows(window, false)
-        setContent { delegate.Content() }
+        setContent { Content() }
     }
 
     override fun onNewIntent(intent: Intent?) {
         super.onNewIntent(intent)
-        intent?.let(delegate::onIntent)
+        intent?.let(::onIntent)
     }
 
     private fun registerFinishReceiver() {
@@ -61,18 +62,12 @@ class MainActivity : ComponentActivity() {
             }
         })
     }
-}
 
-@Inject
-class MainActivityDelegate(
-    private val circuit: Circuit,
-    private val parseMagnet: ParseMagnetUseCase,
-) {
     private val magnet = mutableStateOf<MagnetInfo?>(null)
 
     @Suppress("ModifierMissing")
     @Composable
-    fun Content() {
+    private fun Content() {
         TorrentAppTheme {
             Surface(
                 modifier = Modifier.fillMaxSize(),
@@ -105,7 +100,7 @@ class MainActivityDelegate(
         }
     }
 
-    fun onIntent(intent: Intent) {
+    private fun onIntent(intent: Intent) {
         when {
             intent.scheme == "magnet" -> {
                 magnet.value = parseMagnet(intent.toUri(0)).getOrNull()
