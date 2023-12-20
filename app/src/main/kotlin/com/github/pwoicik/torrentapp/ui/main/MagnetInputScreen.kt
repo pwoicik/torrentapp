@@ -47,6 +47,10 @@ data object MagnetInputScreen : Screen {
     }
 }
 
+@Suppress("MaxLineLength")
+private const val TestMagnet =
+    "magnet:?xt=urn:btih:28a399dc14f6ff3d37e975b072da4095fe7357e9&dn=archlinux-2023.12.01-x86_64.iso"
+
 @Composable
 fun MagnetInputPresenter(
     navigator: Navigator,
@@ -55,9 +59,9 @@ fun MagnetInputPresenter(
     var magnet by remember {
         mutableStateOf(
             TextFieldValue(
-                text = "magnet:?xt=urn:btih:28a399dc14f6ff3d37e975b072da4095fe7357e9&dn=archlinux-2023.12.01-x86_64.iso",
+                text = TestMagnet,
                 selection = TextRange(0, Int.MAX_VALUE),
-            )
+            ),
         )
     }
     var error by remember { mutableStateOf(false) }
@@ -84,10 +88,7 @@ fun MagnetInputPresenter(
 }
 
 @Composable
-fun MagnetInput(
-    uiState: MagnetInputScreen.State,
-    modifier: Modifier = Modifier,
-) {
+fun MagnetInput(uiState: MagnetInputScreen.State, modifier: Modifier = Modifier) {
     Column(
         verticalArrangement = Arrangement.spacedBy(24.dp),
         modifier = modifier,

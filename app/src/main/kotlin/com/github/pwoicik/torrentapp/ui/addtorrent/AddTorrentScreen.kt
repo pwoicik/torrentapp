@@ -106,7 +106,6 @@ enum class ContentLayout {
     Original,
     Subfolder,
     Flat,
-    ;
 }
 
 @Composable
@@ -269,15 +268,13 @@ private fun Checkbox(
 }
 
 @Composable
-private fun DirectoryPicker(
-    selected: String,
-) {
+private fun DirectoryPicker(selected: String) {
     var value by remember(selected) {
         mutableStateOf(
             TextFieldValue(
                 text = selected,
                 selection = TextRange(Int.MAX_VALUE),
-            )
+            ),
         )
     }
     val interactionSource = remember { MutableInteractionSource() }
@@ -360,7 +357,7 @@ private fun ContentLayoutPicker(
                         .size(18.dp)
                         .background(
                             MaterialTheme.colorScheme.secondaryContainer,
-                            RoundedCornerShape(3.dp)
+                            RoundedCornerShape(3.dp),
                         ),
                 )
             }
@@ -369,10 +366,7 @@ private fun ContentLayoutPicker(
 }
 
 @Composable
-private fun TorrentInfo(
-    info: MagnetMetadata,
-    modifier: Modifier = Modifier,
-) {
+private fun TorrentInfo(info: MagnetMetadata, modifier: Modifier = Modifier) {
     Column(modifier) {
         Row {
             info.creator?.let { creator ->
@@ -443,7 +437,7 @@ private fun TorrentInfo(
                 text = "%d x %s".format(
                     info.numberOfPieces,
                     info.pieceSize.formatSize(),
-                )
+                ),
             )
         }
         Column(

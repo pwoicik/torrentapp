@@ -88,13 +88,14 @@ fun SettingsPresenter(
     var saveLocation by remember { mutableStateOf(settings.savePath) }
     var sequential by remember { mutableStateOf(settings.sequential) }
     var prioritizeFirstLast by remember { mutableStateOf(settings.prioritizeFirstLast) }
-    @OptIn(DelicateCoroutinesApi::class) OnDisposedEffect {
+    @OptIn(DelicateCoroutinesApi::class)
+    OnDisposedEffect {
         saveDownloadSettings(
             Settings.Download(
                 savePath = saveLocation,
                 sequential = sequential,
                 prioritizeFirstLast = prioritizeFirstLast,
-            )
+            ),
         )
     }
     return State.Loaded(
@@ -114,7 +115,7 @@ fun SettingsPresenter(
                 context.contentResolver.takePersistableUriPermission(
                     ev.value,
                     Intent.FLAG_GRANT_READ_URI_PERMISSION
-                        .or(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+                        .or(Intent.FLAG_GRANT_WRITE_URI_PERMISSION),
                 )
             }
 
@@ -128,10 +129,7 @@ fun SettingsPresenter(
 }
 
 @Composable
-fun SettingsContent(
-    uiState: State,
-    modifier: Modifier = Modifier,
-) {
+fun SettingsContent(uiState: State, modifier: Modifier = Modifier) {
     Column(
         modifier = modifier
             .background(MaterialTheme.colorScheme.background)
@@ -165,6 +163,7 @@ fun SettingsContent(
                 onValueChange = { uiState(Event.SaveLocationChanged(it)) },
             )
 
+            @Suppress("MaxLineLength")
             SwitchSetting(
                 title = "Sequential download",
                 description = "Download pieces in sequential order, if disabled rarest pieces are prioritized",
@@ -214,7 +213,7 @@ private fun SaveLocationSetting(
             modifier = Modifier.fillMaxWidth(),
         )
         val pickerLauncher = rememberLauncherForActivityResult(
-            ActivityResultContracts.OpenDocumentTree()
+            ActivityResultContracts.OpenDocumentTree(),
         ) f@{ onValueChange(it ?: return@f) }
         LaunchedEffect(Unit) {
             interactionSource.interactions.collect {

@@ -24,7 +24,7 @@ class SaveMagnetUseCaseImpl(
                 name = input.info.name,
                 paused = true,
                 sequential = false,
-            )
+            ),
         )
 
         session.swig().add_torrent(

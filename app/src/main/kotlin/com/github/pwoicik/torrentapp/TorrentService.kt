@@ -46,7 +46,7 @@ class TorrentService : LifecycleService() {
                     .setName("Download service")
                     .setSound(null, null)
                     .setVibrationEnabled(false)
-                    .build()
+                    .build(),
             )
         ServiceCompat.startForeground(
             this,
@@ -106,39 +106,41 @@ class TorrentService : LifecycleService() {
         ).apply { acquire(Long.MAX_VALUE) }
     }
 
-    private fun makeNotification() = NotificationCompat.Builder(this, ID)
-        .setCategory(NotificationCompat.CATEGORY_SERVICE)
-        .setSmallIcon(R.drawable.ic_launcher_foreground)
-        .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
-        .setOngoing(true)
-        .setOnlyAlertOnce(true)
-        .setLocalOnly(true)
-        .setContentTitle("Service running…")
-        .setContentIntent(
-            PendingIntent.getActivity(
-                this,
-                0,
-                Intent(this, MainActivity::class.java),
-                PendingIntent.FLAG_IMMUTABLE,
+    private fun makeNotification() =
+        NotificationCompat.Builder(this, ID)
+            .setCategory(NotificationCompat.CATEGORY_SERVICE)
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
+            .setOngoing(true)
+            .setOnlyAlertOnce(true)
+            .setLocalOnly(true)
+            .setContentTitle("Service running…")
+            .setContentIntent(
+                PendingIntent.getActivity(
+                    this,
+                    0,
+                    Intent(this, MainActivity::class.java),
+                    PendingIntent.FLAG_IMMUTABLE,
+                ),
             )
-        )
-        .addAction(makeShutdownAction())
+            .addAction(makeShutdownAction())
 
-    private fun makeShutdownAction() = NotificationCompat.Action.Builder(
-        -1,
-        "Shutdown",
-        PendingIntent.getBroadcast(
-            this,
-            1,
-            Intent()
-                .setPackage(packageName)
-                .setAction(ApplicationConstants.ACTION_FINISH),
-            PendingIntent.FLAG_IMMUTABLE,
-        ),
-    )
-        .setShowsUserInterface(false)
-        .setContextual(false)
-        .build()
+    private fun makeShutdownAction() =
+        NotificationCompat.Action.Builder(
+            -1,
+            "Shutdown",
+            PendingIntent.getBroadcast(
+                this,
+                1,
+                Intent()
+                    .setPackage(packageName)
+                    .setAction(ApplicationConstants.ACTION_FINISH),
+                PendingIntent.FLAG_IMMUTABLE,
+            ),
+        )
+            .setShowsUserInterface(false)
+            .setContextual(false)
+            .build()
 
     private fun registerFinishReceiver() {
         finishReceiver = registerReceiver(ApplicationConstants.ACTION_FINISH) {

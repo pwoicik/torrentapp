@@ -17,7 +17,7 @@ class ParseMagnetUseCaseImpl : ParseMagnetUseCase {
     override fun invoke(input: String): Either<ParseMagnetError, MagnetInfo> {
         val params = try {
             AddTorrentParams.parseMagnetUri(input)
-        } catch (e: IllegalArgumentException) {
+        } catch (_: IllegalArgumentException) {
             return ParseMagnetError.MagnetInvalid.left()
         }
         val hash = params.infoHashes.best.toHex()

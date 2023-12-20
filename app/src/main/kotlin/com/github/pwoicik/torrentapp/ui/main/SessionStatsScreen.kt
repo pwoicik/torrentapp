@@ -54,10 +54,7 @@ fun SessionStatsPresenter(
 }
 
 @Composable
-fun SessionStats(
-    uiState: SessionStatsScreen.State,
-    modifier: Modifier = Modifier,
-) {
+fun SessionStats(uiState: SessionStatsScreen.State, modifier: Modifier = Modifier) {
     val stats = uiState.info
     Column(
         verticalArrangement = Arrangement.spacedBy(24.dp),

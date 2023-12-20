@@ -43,6 +43,7 @@ import com.slack.circuit.runtime.presenter.Presenter
 import com.slack.circuit.runtime.presenter.presenterOf
 import com.slack.circuit.runtime.ui.Ui
 import com.slack.circuit.runtime.ui.ui
+import kotlinx.coroutines.Dispatchers
 import me.tatarka.inject.annotations.Component
 import me.tatarka.inject.annotations.IntoSet
 import me.tatarka.inject.annotations.Provides
@@ -81,13 +82,11 @@ interface UseCaseComponent {
 interface UiComponent {
     @AppScope
     @Provides
-    fun circuit(
-        presenterFactories: Set<Presenter.Factory>,
-        uiFactories: Set<Ui.Factory>,
-    ) = Circuit.Builder()
-        .addPresenterFactories(presenterFactories)
-        .addUiFactories(uiFactories)
-        .build()
+    fun circuit(presenterFactories: Set<Presenter.Factory>, uiFactories: Set<Ui.Factory>) =
+        Circuit.Builder()
+            .addPresenterFactories(presenterFactories)
+            .addUiFactories(uiFactories)
+            .build()
 
     @[Provides IntoSet]
     fun mainPresenterFactory(
@@ -110,22 +109,21 @@ interface UiComponent {
     }
 
     @[Provides IntoSet]
-    fun mainUiFactory(
-        session: () -> SessionManager,
-    ) = Ui.Factory { screen, _ ->
-        when (screen) {
-            is MainScreen,
-            -> ui<MainScreen.State> { state, modifier -> MainContent(state, modifier) }
+    fun mainUiFactory(session: () -> SessionManager) =
+        Ui.Factory { screen, _ ->
+            when (screen) {
+                is MainScreen,
+                -> ui<MainScreen.State> { state, modifier -> MainContent(state, modifier) }
 
-            is SessionStatsScreen,
-            -> ui<SessionStatsScreen.State> { state, modifier -> SessionStats(state, modifier) }
+                is SessionStatsScreen,
+                -> ui<SessionStatsScreen.State> { state, modifier -> SessionStats(state, modifier) }
 
-            is MagnetInputScreen,
-            -> ui<MagnetInputScreen.State> { state, modifier -> MagnetInput(state, modifier) }
+                is MagnetInputScreen,
+                -> ui<MagnetInputScreen.State> { state, modifier -> MagnetInput(state, modifier) }
 
-            else -> null
+                else -> null
+            }
         }
-    }
 
     @[Provides IntoSet]
     fun addTorrentPresenterFactory(
@@ -141,7 +139,7 @@ interface UiComponent {
                     navigator,
                     getMagnetMetadata(),
                     saveMagnet(),
-                    getDownloadSettings()
+                    getDownloadSettings(),
                 )
             }
 
@@ -150,20 +148,21 @@ interface UiComponent {
     }
 
     @[Provides IntoSet]
-    fun addTorrentUiFactory() = Ui.Factory { screen, _ ->
-        when (screen) {
-            is AddTorrentScreen,
-            -> ui<AddTorrentScreen.State> { state, modifier ->
-                AddTorrentContent(
-                    screen,
-                    state,
-                    modifier
-                )
-            }
+    fun addTorrentUiFactory() =
+        Ui.Factory { screen, _ ->
+            when (screen) {
+                is AddTorrentScreen,
+                -> ui<AddTorrentScreen.State> { state, modifier ->
+                    AddTorrentContent(
+                        screen,
+                        state,
+                        modifier,
+                    )
+                }
 
-            else -> null
+                else -> null
+            }
         }
-    }
 
     @[Provides IntoSet]
     fun settingsPresenterFactory(
@@ -179,36 +178,39 @@ interface UiComponent {
     }
 
     @[Provides IntoSet]
-    fun settingsUiFactory() = Ui.Factory { screen, _ ->
-        when (screen) {
-            is SettingsScreen,
-            -> ui<SettingsScreen.State> { state, modifier -> SettingsContent(state, modifier) }
+    fun settingsUiFactory() =
+        Ui.Factory { screen, _ ->
+            when (screen) {
+                is SettingsScreen,
+                -> ui<SettingsScreen.State> { state, modifier -> SettingsContent(state, modifier) }
 
-            else -> null
+                else -> null
+            }
         }
-    }
 }
 
 interface DataComponent {
     @AppScope
     @Provides
-    fun database(context: ApplicationContext) = Database(
-        AndroidSqliteDriver(
-            schema = Database.Schema.synchronous(),
-            context = context,
-            name = "torrentapp.db",
-            useNoBackupDirectory = true,
-        ),
-    )
+    fun database(context: ApplicationContext) =
+        Database(
+            AndroidSqliteDriver(
+                schema = Database.Schema.synchronous(),
+                context = context,
+                name = "torrentapp.db",
+                useNoBackupDirectory = true,
+            ),
+        )
 
     @AppScope
     @Provides
-    fun datastore(context: ApplicationContext): SettingsDataStore = DataStoreFactory.create(
-        storage = OkioStorage(
-            fileSystem = FileSystem.SYSTEM,
-            serializer = SettingsSerializer,
-        ) { context.dataStoreFile("settings.pb").absolutePath.toPath() },
-    )
+    fun datastore(context: ApplicationContext): SettingsDataStore =
+        DataStoreFactory.create(
+            storage = OkioStorage(
+                fileSystem = FileSystem.SYSTEM,
+                serializer = SettingsSerializer,
+            ) { context.dataStoreFile("settings.pb").absolutePath.toPath() },
+        )
 
     @AppScope
     @Provides
@@ -223,4 +225,15 @@ abstract class AppComponent(
     @get:Provides protected val context: ApplicationContext,
 ) : UiComponent, DataComponent, UseCaseComponent {
     abstract val mainActivityDelegate: MainActivityDelegate
+
+    @Provides
+    protected fun mainDispatcher(): MainDispatcher = Dispatchers.Main
+
+    @Suppress("InjectDispatcher")
+    @Provides
+    protected fun defaultDispatcher(): DefaultDispatcher = Dispatchers.Default
+
+    @Suppress("InjectDispatcher")
+    @Provides
+    protected fun ioDispatcher(): IoDispatcher = Dispatchers.IO
 }

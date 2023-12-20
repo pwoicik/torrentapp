@@ -16,21 +16,22 @@ import kotlin.time.Duration.Companion.seconds
 class GetSessionInfoUseCaseImpl(
     private val session: SessionManager,
 ) : GetSessionInfoUseCase {
-    override fun invoke(input: Unit) = flow {
-        val swig = session.swig()
-        val stats = session.stats()
-        while (coroutineContext.isActive) {
-            emit(
-                SessionInfo(
-                    listenPort = swig.listen_port(),
-                    dhtNodes = stats.dhtNodes(),
-                    downloadRate = ByteSize(stats.downloadRate()),
-                    totalDownload = ByteSize(stats.totalDownload()),
-                    uploadRate = ByteSize(stats.uploadRate()),
-                    totalUpload = ByteSize(stats.totalUpload()),
-                ),
-            )
-            delay(1.seconds)
-        }
-    }.conflate()
+    override fun invoke(input: Unit) =
+        flow {
+            val swig = session.swig()
+            val stats = session.stats()
+            while (coroutineContext.isActive) {
+                emit(
+                    SessionInfo(
+                        listenPort = swig.listen_port(),
+                        dhtNodes = stats.dhtNodes(),
+                        downloadRate = ByteSize(stats.downloadRate()),
+                        totalDownload = ByteSize(stats.totalDownload()),
+                        uploadRate = ByteSize(stats.uploadRate()),
+                        totalUpload = ByteSize(stats.totalUpload()),
+                    ),
+                )
+                delay(1.seconds)
+            }
+        }.conflate()
 }

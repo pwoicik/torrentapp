@@ -67,10 +67,7 @@ data object MainScreen : Screen {
 }
 
 @Composable
-fun MainPresenter(
-    navigator: Navigator,
-    getTorrents: GetTorrentsUseCase,
-): MainScreen.State {
+fun MainPresenter(navigator: Navigator, getTorrents: GetTorrentsUseCase): MainScreen.State {
     val torrents by getTorrents().collectAsStateWithLifecycle(initialValue = null)
     return MainScreen.State(
         torrents = torrents,
@@ -82,10 +79,7 @@ fun MainPresenter(
 }
 
 @Composable
-fun MainContent(
-    uiState: MainScreen.State,
-    modifier: Modifier = Modifier,
-) {
+fun MainContent(uiState: MainScreen.State, modifier: Modifier = Modifier) {
     val context = LocalContext.current
     Scaffold(
         topBar = {
@@ -130,10 +124,7 @@ fun MainContent(
 }
 
 @Composable
-private fun Torrent(
-    torrent: SavedTorrent,
-    modifier: Modifier = Modifier,
-) {
+private fun Torrent(torrent: SavedTorrent, modifier: Modifier = Modifier) {
     Row(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         modifier = modifier.padding(12.dp, 12.dp, 18.dp, 12.dp),
@@ -166,9 +157,7 @@ private fun Torrent(
 }
 
 @Composable
-private fun StatsButton(
-    modifier: Modifier = Modifier,
-) {
+private fun StatsButton(modifier: Modifier = Modifier) {
     var visible by remember { mutableStateOf(false) }
     IconButton(
         onClick = { visible = true },
@@ -200,10 +189,7 @@ private fun StatsButton(
 }
 
 @Composable
-private fun MagnetFab(
-    onNavEvent: (NavEvent.GoTo) -> Unit,
-    modifier: Modifier = Modifier,
-) {
+private fun MagnetFab(onNavEvent: (NavEvent.GoTo) -> Unit, modifier: Modifier = Modifier) {
     var visible by remember { mutableStateOf(false) }
     FloatingActionButton(
         onClick = { visible = true },

@@ -3,13 +3,13 @@ package com.github.pwoicik.torrentapp.data.usecase
 import arrow.core.Either
 import arrow.core.right
 import com.github.pwoicik.torrentapp.di.ApplicationContext
+import com.github.pwoicik.torrentapp.di.IoDispatcher
 import com.github.pwoicik.torrentapp.domain.model.ByteSize
 import com.github.pwoicik.torrentapp.domain.model.MagnetInfo
 import com.github.pwoicik.torrentapp.domain.model.MagnetMetadata
 import com.github.pwoicik.torrentapp.domain.model.Sha1Hash
 import com.github.pwoicik.torrentapp.domain.usecase.GetMagnetMetadataError
 import com.github.pwoicik.torrentapp.domain.usecase.GetMagnetMetadataUseCase
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import me.tatarka.inject.annotations.Inject
 import org.libtorrent4j.SessionManager
@@ -20,9 +20,10 @@ import java.time.Instant
 class GetMagnetMetadataUseCaseImpl(
     private val session: SessionManager,
     private val context: ApplicationContext,
+    private val ioDispatcher: IoDispatcher,
 ) : GetMagnetMetadataUseCase {
     override suspend fun invoke(input: MagnetInfo): Either<GetMagnetMetadataError, MagnetMetadata> {
-        val info = withContext(Dispatchers.IO) {
+        val info = withContext(ioDispatcher) {
             session.fetchMagnet(
                 input.uri.value,
                 Int.MAX_VALUE,

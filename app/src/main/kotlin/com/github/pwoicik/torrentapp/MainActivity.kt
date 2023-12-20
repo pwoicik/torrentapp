@@ -70,6 +70,7 @@ class MainActivityDelegate(
 ) {
     private val magnet = mutableStateOf<MagnetInfo?>(null)
 
+    @Suppress("ModifierMissing")
     @Composable
     fun Content() {
         TorrentAppTheme {
@@ -86,7 +87,7 @@ class MainActivityDelegate(
                         NavigableCircuitContent(
                             navigator = navigator,
                             backstack = backstack,
-                            decoration = GestureNavigationDecoration { navigator.pop() }
+                            decoration = GestureNavigationDecoration { navigator.pop() },
                         )
                     }
                 }

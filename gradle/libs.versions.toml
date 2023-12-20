@@ -14,6 +14,8 @@ compose-m3 = "1.2.0-beta01"
 coreKtx = "1.12.0"
 datastore = "1.1.0-alpha07"
 desugaring = "2.0.4"
+detekt = "1.23.4"
+detekt-compose = "0.3.8"
 espressoCore = "3.5.1"
 jna = "5.13.0"
 junit = "4.13.2"
@@ -59,6 +61,8 @@ compose-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview", v
 compose-ui = { module = "androidx.compose.ui:ui", version.ref = "compose" }
 datastore = { module = "androidx.datastore:datastore", version.ref = "datastore" }
 desugaring = { module = "com.android.tools:desugar_jdk_libs_nio", version.ref = "desugaring" }
+detekt-compose = { module = "io.nlopez.compose.rules:detekt", version.ref = "detekt-compose" }
+detekt-formatting = { module = "io.gitlab.arturbosch.detekt:detekt-formatting", version.ref = "detekt" }
 jna = { module = "net.java.dev.jna:jna", version.ref = "jna" }
 junit = { module = "junit:junit", version.ref = "junit" }
 ktinject = { module = "me.tatarka.inject:kotlin-inject-runtime", version.ref = "ktinject" }
@@ -77,6 +81,7 @@ work = { module = "androidx.work:work-runtime", version.ref = "work" }
 
 [plugins]
 agp = { id = "com.android.application", version.ref = "agp" }
+detekt = { id = "io.github.detekt.gradle.compiler-plugin", version.ref = "detekt" }
 kgp = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 sqldelight = { id = "app.cash.sqldelight", version.ref = "sqldelight" }
