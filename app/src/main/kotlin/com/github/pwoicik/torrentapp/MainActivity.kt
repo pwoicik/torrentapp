@@ -1,6 +1,9 @@
 package com.github.pwoicik.torrentapp
 
+import android.Manifest.permission.POST_NOTIFICATIONS
 import android.content.Intent
+import android.content.pm.PackageManager.PERMISSION_GRANTED
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -45,6 +48,12 @@ class MainActivity(
 
         WindowCompat.setDecorFitsSystemWindows(window, false)
         setContent { Content() }
+
+        if (Build.VERSION.SDK_INT >= 33 &&
+            checkSelfPermission(POST_NOTIFICATIONS) != PERMISSION_GRANTED
+        ) {
+            requestPermissions(arrayOf(POST_NOTIFICATIONS), 0)
+        }
     }
 
     override fun onNewIntent(intent: Intent?) {
