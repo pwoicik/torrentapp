@@ -13,21 +13,23 @@ import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.isActive
 import me.tatarka.inject.annotations.Inject
 import org.libtorrent4j.SessionManager
+import org.libtorrent4j.SessionStats
+import org.libtorrent4j.swig.session
 import kotlin.coroutines.coroutineContext
 import kotlin.time.Duration.Companion.seconds
 
 @Inject
 @AppScope
 class SessionInfoRepository(
-    private val session: SessionManager,
+    session: SessionManager,
 ) {
     private val info = flow {
-        val swig = session.swig()
-        val stats = session.stats()
         while (coroutineContext.isActive) {
+            val swig: session? = session.swig()
+            val stats: SessionStats = session.stats()
             emit(
                 SessionInfo(
-                    listenPort = swig.listen_port(),
+                    listenPort = swig?.listen_port() ?: 0,
                     dhtNodes = stats.dhtNodes(),
                     downloadRate = ByteSize(stats.downloadRate()),
                     totalDownload = ByteSize(stats.totalDownload()),
@@ -38,8 +40,9 @@ class SessionInfoRepository(
             delay(1.seconds)
         }
     }.shareIn(
-        @OptIn(DelicateCoroutinesApi::class) GlobalScope,
-        SharingStarted.WhileSubscribed(3_000),
+        scope = @OptIn(DelicateCoroutinesApi::class) GlobalScope,
+        started = SharingStarted.Lazily,
+        replay = 1,
     )
 
     fun getInfo(): Flow<SessionInfo> = info
