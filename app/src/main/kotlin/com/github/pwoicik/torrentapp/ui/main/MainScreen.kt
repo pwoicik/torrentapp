@@ -1,7 +1,11 @@
 package com.github.pwoicik.torrentapp.ui.main
 
 import android.content.Intent
+import androidx.compose.animation.animateColor
+import androidx.compose.animation.core.animateInt
+import androidx.compose.animation.core.updateTransition
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -11,9 +15,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddLink
+import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.outlined.MonitorHeart
 import androidx.compose.material.icons.outlined.PowerOff
@@ -23,29 +28,39 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextMotion
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.github.pwoicik.torrentapp.ApplicationConstants
 import com.github.pwoicik.torrentapp.domain.model.SavedTorrent
+import com.github.pwoicik.torrentapp.domain.model.Sha1Hash
+import com.github.pwoicik.torrentapp.domain.model.TorrentState
 import com.github.pwoicik.torrentapp.domain.model.TorrentTransferStats
 import com.github.pwoicik.torrentapp.domain.usecase.GetTorrentTransferStatsUseCase
 import com.github.pwoicik.torrentapp.domain.usecase.GetTorrentsUseCase
+import com.github.pwoicik.torrentapp.domain.usecase.PlayPauseTorrentInput
+import com.github.pwoicik.torrentapp.domain.usecase.PlayPauseTorrentUseCase
 import com.github.pwoicik.torrentapp.domain.usecase.invoke
 import com.github.pwoicik.torrentapp.ui.main.MainScreen.Event
 import com.github.pwoicik.torrentapp.ui.settings.SettingsScreen
@@ -57,6 +72,7 @@ import com.slack.circuit.runtime.CircuitUiEvent
 import com.slack.circuit.runtime.CircuitUiState
 import com.slack.circuit.runtime.Navigator
 import com.slack.circuit.runtime.screen.Screen
+import kotlinx.coroutines.launch
 import kotlinx.parcelize.Parcelize
 
 @Parcelize
@@ -70,17 +86,42 @@ data object MainScreen : Screen {
 
     sealed interface Event : CircuitUiEvent {
         data class ChildNav(val value: NavEvent.GoTo) : Event
+        data class TorrentPaused(val hash: Sha1Hash) : Event
+        data class TorrentResumed(val hash: Sha1Hash) : Event
     }
 }
 
 @Composable
-fun MainPresenter(navigator: Navigator, getTorrents: GetTorrentsUseCase): MainScreen.State {
+fun MainPresenter(
+    navigator: Navigator,
+    getTorrents: GetTorrentsUseCase,
+    playPauseTorrent: PlayPauseTorrentUseCase,
+): MainScreen.State {
     val torrents by getTorrents().collectAsStateWithLifecycle(initialValue = null)
+    val coroutineScope = rememberCoroutineScope()
     return MainScreen.State(
         torrents = torrents,
     ) {
         when (it) {
             is Event.ChildNav -> navigator.onNavEvent(it.value)
+
+            is Event.TorrentPaused -> coroutineScope.launch {
+                playPauseTorrent(
+                    PlayPauseTorrentInput(
+                        action = PlayPauseTorrentInput.Action.Pause,
+                        hash = it.hash,
+                    ),
+                )
+            }
+
+            is Event.TorrentResumed -> coroutineScope.launch {
+                playPauseTorrent(
+                    PlayPauseTorrentInput(
+                        action = PlayPauseTorrentInput.Action.Play,
+                        hash = it.hash,
+                    ),
+                )
+            }
         }
     }
 }
@@ -133,6 +174,8 @@ fun MainContent(
                     stats = getTorrentTransferStats(it.hash)
                         .collectAsStateWithLifecycle(TorrentTransferStats())
                         .value,
+                    onPause = { uiState(Event.TorrentPaused(it.hash)) },
+                    onResume = { uiState(Event.TorrentResumed(it.hash)) },
                 )
             }
         }
@@ -143,39 +186,51 @@ fun MainContent(
 private fun Torrent(
     torrent: SavedTorrent,
     stats: TorrentTransferStats,
+    onPause: () -> Unit,
+    onResume: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Row(
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
         modifier = modifier.padding(12.dp, 12.dp, 18.dp, 12.dp),
     ) {
-        IconButton(
-            onClick = { /*TODO*/ },
+        PlayPauseButton(
+            paused = stats.state.isPaused,
+            onClick = {
+                if (stats.state.isPaused) {
+                    onResume()
+                } else {
+                    onPause()
+                }
+            },
             modifier = Modifier.align(Alignment.CenterVertically),
-        ) {
-            Icon(
-                imageVector = Icons.Filled.PlayArrow,
-                contentDescription = null,
-                modifier = Modifier
-                    .background(
-                        color = MaterialTheme.colorScheme.primaryContainer,
-                        shape = CircleShape,
-                    )
-                    .padding(7.5.dp)
-                    .size(24.dp),
-            )
-        }
-        Column(
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
+        )
+        Column {
             Text(torrent.name)
             LinearProgressIndicator(
                 progress = { stats.progress },
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
             )
             CompositionLocalProvider(
                 LocalTextStyle provides MaterialTheme.typography.bodySmall,
+                LocalContentColor provides MaterialTheme.colorScheme.onSurfaceVariant,
             ) {
+                Row {
+                    Text(
+                        text = when (stats.state) {
+                            TorrentState.CheckingFiles -> "Checking files"
+                            TorrentState.Downloading -> "Downloading"
+                            TorrentState.DownloadingMetadata -> "Downloading metadata"
+                            TorrentState.Seeding -> "Seeding"
+                            TorrentState.CheckingResumeData -> "Checking"
+                            TorrentState.Finished -> "Finished"
+                            TorrentState.Paused -> "Paused"
+                            TorrentState.Stopped -> "Stopped"
+                        },
+                    )
+                }
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
@@ -194,6 +249,54 @@ private fun Torrent(
             }
         }
     }
+}
+
+@Composable
+private fun PlayPauseButton(
+    paused: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val transition = updateTransition(
+        targetState = paused,
+        label = "PlayPauseIcon",
+    )
+    val radius by transition.animateInt(label = "Radius") {
+        if (it) 30 else 50
+    }
+    val backgroundColor by transition.animateColor(label = "BackgroundColor") {
+        if (it) {
+            MaterialTheme.colorScheme.tertiaryContainer
+        } else {
+            MaterialTheme.colorScheme.primaryContainer
+        }
+    }
+    val color by transition.animateColor(label = "IconColor") {
+        if (it) {
+            MaterialTheme.colorScheme.onTertiaryContainer
+        } else {
+            MaterialTheme.colorScheme.onPrimaryContainer
+        }
+    }
+    Icon(
+        imageVector = if (paused) {
+            Icons.Filled.PlayArrow
+        } else {
+            Icons.Filled.Pause
+        },
+        tint = color,
+        contentDescription = null,
+        modifier = modifier
+            .minimumInteractiveComponentSize()
+            .graphicsLayer {
+                clip = true
+                shape = RoundedCornerShape(radius)
+            }
+            .drawBehind { drawRect(backgroundColor) }
+            .clickable(role = Role.Button) { onClick() }
+            .padding(7.5.dp)
+            .size(24.dp),
+    )
 }
 
 @Composable

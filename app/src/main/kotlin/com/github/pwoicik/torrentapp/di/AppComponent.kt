@@ -20,6 +20,7 @@ import com.github.pwoicik.torrentapp.data.usecase.GetSessionInfoUseCaseImpl
 import com.github.pwoicik.torrentapp.data.usecase.GetTorrentTransferStatsUseCaseImpl
 import com.github.pwoicik.torrentapp.data.usecase.GetTorrentsUseCaseImpl
 import com.github.pwoicik.torrentapp.data.usecase.ParseMagnetUseCaseImpl
+import com.github.pwoicik.torrentapp.data.usecase.PlayPauseTorrentUseCaseImpl
 import com.github.pwoicik.torrentapp.data.usecase.SaveDownloadSettingsUseCaseImpl
 import com.github.pwoicik.torrentapp.data.usecase.SaveMagnetUseCaseImpl
 import com.github.pwoicik.torrentapp.db.Database
@@ -29,6 +30,7 @@ import com.github.pwoicik.torrentapp.domain.usecase.GetSessionInfoUseCase
 import com.github.pwoicik.torrentapp.domain.usecase.GetTorrentTransferStatsUseCase
 import com.github.pwoicik.torrentapp.domain.usecase.GetTorrentsUseCase
 import com.github.pwoicik.torrentapp.domain.usecase.ParseMagnetUseCase
+import com.github.pwoicik.torrentapp.domain.usecase.PlayPauseTorrentUseCase
 import com.github.pwoicik.torrentapp.domain.usecase.SaveDownloadSettingsUseCase
 import com.github.pwoicik.torrentapp.domain.usecase.SaveMagnetUseCase
 import com.github.pwoicik.torrentapp.ui.addtorrent.AddTorrentContent
@@ -90,6 +92,9 @@ interface UseCaseComponent {
 
     val GetTorrentTransferStatsUseCaseImpl.bind: GetTorrentTransferStatsUseCase
         @Provides get() = this
+
+    val PlayPauseTorrentUseCaseImpl.bind: PlayPauseTorrentUseCase
+        @Provides get() = this
 }
 
 interface UiComponent {
@@ -106,10 +111,11 @@ interface UiComponent {
         parseMagnet: () -> ParseMagnetUseCase,
         getTorrents: () -> GetTorrentsUseCase,
         getSessionInfo: () -> GetSessionInfoUseCase,
+        playPauseTorrent: () -> PlayPauseTorrentUseCase,
     ) = Presenter.Factory { screen, navigator, _ ->
         when (screen) {
             is MainScreen,
-            -> presenterOf { MainPresenter(navigator, getTorrents()) }
+            -> presenterOf { MainPresenter(navigator, getTorrents(), playPauseTorrent()) }
 
             is SessionStatsScreen,
             -> presenterOf { SessionStatsPresenter(navigator, getSessionInfo()) }
