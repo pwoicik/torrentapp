@@ -1,10 +1,10 @@
 package com.github.pwoicik.torrentapp
 
-import android.Manifest
+import android.Manifest.permission.POST_NOTIFICATIONS
 import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Intent
-import android.content.pm.PackageManager
+import android.content.pm.PackageManager.PERMISSION_GRANTED
 import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.PowerManager
@@ -13,28 +13,28 @@ import androidx.core.app.NotificationChannelCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.app.ServiceCompat
-import androidx.core.content.ContextCompat
 import androidx.core.content.getSystemService
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
+import com.github.pwoicik.torrentapp.domain.usecase.GetSessionInfoUseCase
+import com.github.pwoicik.torrentapp.domain.usecase.invoke
 import com.github.pwoicik.torrentapp.ui.util.formatSpeed
-import com.github.pwoicik.torrentapp.ui.util.toByteSize
 import com.github.pwoicik.torrentapp.util.registerReceiver
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import me.tatarka.inject.annotations.Inject
 import org.libtorrent4j.AlertListener
 import org.libtorrent4j.SessionManager
 import org.libtorrent4j.alerts.Alert
-import kotlin.time.Duration.Companion.seconds
 
 @Inject
 class TorrentService(
     private val sessionManager: SessionManager,
+    private val getSessionInfoUseCase: GetSessionInfoUseCase,
 ) : LifecycleService() {
     private lateinit var finishReceiver: BroadcastReceiver
     private lateinit var wakeLock: PowerManager.WakeLock
+
+    private val self get() = this
 
     override fun onCreate() {
         super.onCreate()
@@ -77,27 +77,23 @@ class TorrentService(
             }
         })
         lifecycleScope.launch {
-            val manager = NotificationManagerCompat.from(this@TorrentService)
-            val stats = sessionManager.stats()
-            while (isActive) {
-                if (ContextCompat.checkSelfPermission(
-                        this@TorrentService,
-                        Manifest.permission.POST_NOTIFICATIONS,
-                    ) == PackageManager.PERMISSION_GRANTED
+            val manager = NotificationManagerCompat.from(self)
+            getSessionInfoUseCase().collect {
+                if (Build.VERSION.SDK_INT < 33 ||
+                    checkSelfPermission(POST_NOTIFICATIONS) == PERMISSION_GRANTED
                 ) {
                     manager.notify(
                         1,
                         makeNotification()
                             .setContentText(
                                 "↓ %s | ↑ %s".format(
-                                    stats.downloadRate().toByteSize().formatSpeed(),
-                                    stats.uploadRate().toByteSize().formatSpeed(),
+                                    it.downloadRate.formatSpeed(),
+                                    it.uploadRate.formatSpeed(),
                                 ),
                             )
                             .build(),
                     )
                 }
-                delay(1.seconds)
             }
         }
     }
