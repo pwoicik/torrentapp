@@ -138,6 +138,8 @@ dependencies {
     implementation(libs.compose.icons)
     androidTestImplementation(libs.compose.test)
 
+    implementation(libs.material)
+
     implementation(libs.circuit.foundation)
     implementation(libs.circuit.android)
     implementation(libs.circuit.gestureNavigation)
