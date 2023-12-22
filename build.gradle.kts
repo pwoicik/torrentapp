@@ -1,3 +1,4 @@
+import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
 import io.github.detekt.gradle.DetektKotlinCompilerPlugin
 import io.gitlab.arturbosch.detekt.DetektPlugin
 import io.gitlab.arturbosch.detekt.extensions.DetektExtension
@@ -12,6 +13,9 @@ plugins {
     alias(libs.plugins.wire) apply false
 
     alias(libs.plugins.detekt)
+
+    id("jvm-ecosystem")
+    alias(libs.plugins.versions)
 }
 
 allprojects {
@@ -31,4 +35,16 @@ allprojects {
         detektPlugins(libs.detekt.formatting)
         detektPlugins(libs.detekt.compose)
     }
+}
+
+tasks.withType<DependencyUpdatesTask> {
+    rejectVersionIf {
+        !isStable(candidate.version) && isStable(currentVersion)
+    }
+}
+
+fun isStable(version: String): Boolean {
+    val stableKeyword = listOf("RELEASE", "FINAL", "GA").any { version.uppercase().contains(it) }
+    val regex = "^[0-9,.v-]+(-r)?$".toRegex()
+    return stableKeyword || regex.matches(version)
 }
