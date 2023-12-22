@@ -25,6 +25,7 @@ class SessionInfoRepository(
 ) {
     private val info = flow {
         while (coroutineContext.isActive) {
+            delay(1.seconds)
             val swig: session? = session.swig()
             val stats: SessionStats = session.stats()
             emit(
@@ -37,7 +38,6 @@ class SessionInfoRepository(
                     totalUpload = ByteSize(stats.totalUpload()),
                 ),
             )
-            delay(1.seconds)
         }
     }.shareIn(
         scope = @OptIn(DelicateCoroutinesApi::class) GlobalScope,

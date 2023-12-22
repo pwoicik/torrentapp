@@ -10,7 +10,9 @@ import androidx.work.ListenableWorker
 import androidx.work.WorkerParameters
 import app.cash.sqldelight.async.coroutines.synchronous
 import app.cash.sqldelight.driver.android.AndroidSqliteDriver
+import com.github.pwoicik.torrentapp.CloseSessionWorker
 import com.github.pwoicik.torrentapp.MainActivity
+import com.github.pwoicik.torrentapp.RestoreSessionWorker
 import com.github.pwoicik.torrentapp.TorrentService
 import com.github.pwoicik.torrentapp.data.datastore.SettingsDataStore
 import com.github.pwoicik.torrentapp.data.datastore.SettingsSerializer
@@ -242,6 +244,8 @@ interface DataComponent {
 
 private typealias ActivityBinding = Pair<KClass<out Activity>, () -> Activity>
 private typealias ServiceBinding = Pair<KClass<out Service>, () -> Service>
+private typealias WorkerBinding =
+    Pair<KClass<out ListenableWorker>, (Context, WorkerParameters) -> ListenableWorker>
 
 interface AndroidComponent {
     @[Provides IntoMap]
@@ -252,10 +256,19 @@ interface AndroidComponent {
     fun torrentService(provider: () -> TorrentService): ServiceBinding =
         TorrentService::class to provider
 
+    @[Provides IntoMap]
+    fun restoreSessionWorker(
+        provider: (Context, WorkerParameters) -> RestoreSessionWorker,
+    ): WorkerBinding = RestoreSessionWorker::class to provider
+
+    @[Provides IntoMap]
+    fun closeSessionWorker(
+        provider: (Context, WorkerParameters) -> CloseSessionWorker,
+    ): WorkerBinding = CloseSessionWorker::class to provider
+
     val activities: Map<KClass<out Activity>, () -> Activity>
     val services: Map<KClass<out Service>, () -> Service>
     val workers: Map<KClass<out ListenableWorker>, (Context, WorkerParameters) -> ListenableWorker>
-        get() = emptyMap()
 }
 
 @AppScope

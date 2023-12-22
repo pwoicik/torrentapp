@@ -5,16 +5,23 @@ CREATE TABLE torrent (
     name TEXT NOT NULL,
     paused INTEGER AS Boolean NOT NULL,
     sequential INTEGER AS Boolean NOT NULL,
-    savePath TEXT NOT NULL
-) WITHOUT ROWID;
+    savePath TEXT NOT NULL,
+    resumeData TEXT DEFAULT NULL
+);
 
 CREATE INDEX torrent_hash ON torrent(hash);
 
 getTorrentBasicInfos:
 SELECT hash, name, paused FROM torrent;
 
+getResumeData:
+SELECT resumeData FROM torrent;
+
 insert:
-INSERT OR IGNORE INTO torrent VALUES ?;
+INSERT OR IGNORE INTO torrent VALUES (?, ?, ?, ?, ?, NULL);
 
 updateState:
 UPDATE torrent SET paused = ? WHERE hash = ?;
+
+updateResumeData:
+UPDATE torrent SET resumeData = ? WHERE hash = ?;

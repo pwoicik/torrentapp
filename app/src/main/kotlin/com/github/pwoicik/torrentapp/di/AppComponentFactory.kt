@@ -29,5 +29,6 @@ class AppComponentFactory : AppComponentFactory() {
         cl: ClassLoader,
         className: String,
         intent: Intent?,
-    ) = services[cl.loadClass(className)!!.kotlin]!!()
+    ) = services[cl.loadClass(className)!!.kotlin]?.invoke()
+        ?: super.instantiateServiceCompat(cl, className, intent)
 }

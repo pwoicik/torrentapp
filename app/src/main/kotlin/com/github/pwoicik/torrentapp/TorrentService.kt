@@ -16,6 +16,10 @@ import androidx.core.app.ServiceCompat
 import androidx.core.content.getSystemService
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
+import androidx.work.ExistingWorkPolicy
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.OutOfQuotaPolicy
+import androidx.work.WorkManager
 import com.github.pwoicik.torrentapp.domain.usecase.GetSessionInfoUseCase
 import com.github.pwoicik.torrentapp.domain.usecase.invoke
 import com.github.pwoicik.torrentapp.ui.util.formatSpeed
@@ -34,12 +38,50 @@ class TorrentService(
     private lateinit var finishReceiver: BroadcastReceiver
     private lateinit var wakeLock: PowerManager.WakeLock
 
-    private val self get() = this
-
     override fun onCreate() {
         super.onCreate()
         registerFinishReceiver()
         acquireWakeLock()
+        startForeground()
+        WorkManager.getInstance(this)
+            .enqueueUniqueWork(
+                "restoreSession",
+                ExistingWorkPolicy.KEEP,
+                OneTimeWorkRequestBuilder<RestoreSessionWorker>()
+                    .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
+                    .build(),
+            )
+        observeSession()
+    }
+
+    override fun onDestroy() {
+        wakeLock.release()
+        unregisterReceiver(finishReceiver)
+        WorkManager.getInstance(this)
+            .enqueueUniqueWork(
+                "closeSession",
+                ExistingWorkPolicy.KEEP,
+                OneTimeWorkRequestBuilder<CloseSessionWorker>()
+                    .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
+                    .build(),
+            )
+        super.onDestroy()
+    }
+
+    private fun acquireWakeLock() {
+        wakeLock = getSystemService<PowerManager>()!!.newWakeLock(
+            PowerManager.PARTIAL_WAKE_LOCK,
+            ID,
+        ).apply { acquire(Long.MAX_VALUE) }
+    }
+
+    private fun registerFinishReceiver() {
+        finishReceiver = registerReceiver(ApplicationConstants.ACTION_FINISH) {
+            stopSelf()
+        }
+    }
+
+    private fun startForeground() {
         NotificationManagerCompat.from(this)
             .createNotificationChannel(
                 NotificationChannelCompat.Builder(
@@ -61,14 +103,16 @@ class TorrentService(
                 0
             },
         )
-        sessionManager.start()
+    }
+
+    private fun observeSession() {
         sessionManager.addListener(object : AlertListener {
             override fun types() = null
 
             override fun alert(alert: Alert<*>) {
-                if ("Peer" in alert::class.simpleName!!) return
+                if ("(Peer)|(Block)".toRegex() in alert::class.simpleName!!) return
                 Log.d(
-                    "test",
+                    ID,
                     "%s: %s".format(
                         alert::class.simpleName,
                         alert.message(),
@@ -76,8 +120,8 @@ class TorrentService(
                 )
             }
         })
+        val manager = NotificationManagerCompat.from(this)
         lifecycleScope.launch {
-            val manager = NotificationManagerCompat.from(self)
             getSessionInfoUseCase().collect {
                 if (Build.VERSION.SDK_INT < 33 ||
                     checkSelfPermission(POST_NOTIFICATIONS) == PERMISSION_GRANTED
@@ -96,13 +140,6 @@ class TorrentService(
                 }
             }
         }
-    }
-
-    private fun acquireWakeLock() {
-        wakeLock = getSystemService<PowerManager>()!!.newWakeLock(
-            PowerManager.PARTIAL_WAKE_LOCK,
-            ID,
-        ).apply { acquire(Long.MAX_VALUE) }
     }
 
     private fun makeNotification() =
@@ -140,19 +177,6 @@ class TorrentService(
             .setShowsUserInterface(false)
             .setContextual(false)
             .build()
-
-    private fun registerFinishReceiver() {
-        finishReceiver = registerReceiver(ApplicationConstants.ACTION_FINISH) {
-            stopSelf()
-        }
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        sessionManager.stop()
-        wakeLock.release()
-        unregisterReceiver(finishReceiver)
-    }
 
     companion object {
         val ID = TorrentService::class.qualifiedName!!

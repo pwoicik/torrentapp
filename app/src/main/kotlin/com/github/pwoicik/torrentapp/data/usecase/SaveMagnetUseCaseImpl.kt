@@ -1,7 +1,6 @@
 package com.github.pwoicik.torrentapp.data.usecase
 
 import com.github.pwoicik.torrentapp.db.Database
-import com.github.pwoicik.torrentapp.db.Torrent
 import com.github.pwoicik.torrentapp.di.IoDispatcher
 import com.github.pwoicik.torrentapp.domain.usecase.SaveMagnetInput
 import com.github.pwoicik.torrentapp.domain.usecase.SaveMagnetUseCase
@@ -22,13 +21,11 @@ class SaveMagnetUseCaseImpl(
 ) : SaveMagnetUseCase {
     override suspend fun invoke(input: SaveMagnetInput) {
         db.torrentQueries.insert(
-            Torrent(
-                hash = input.info.hash.value,
-                name = input.info.name,
-                paused = !input.startImmediately,
-                sequential = input.sequential,
-                savePath = input.savePath,
-            ),
+            hash = input.info.hash.value,
+            name = input.info.name,
+            paused = !input.startImmediately,
+            sequential = input.sequential,
+            savePath = input.savePath,
         )
 
         val handle = withContext(ioDispatcher) {
