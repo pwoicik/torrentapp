@@ -10,29 +10,24 @@ import androidx.work.ListenableWorker
 import androidx.work.WorkerParameters
 import app.cash.sqldelight.async.coroutines.synchronous
 import app.cash.sqldelight.driver.android.AndroidSqliteDriver
-import com.github.pwoicik.torrentapp.CloseSessionWorker
 import com.github.pwoicik.torrentapp.MainActivity
-import com.github.pwoicik.torrentapp.RestoreSessionWorker
 import com.github.pwoicik.torrentapp.TorrentService
+import com.github.pwoicik.torrentapp.data.TorrentEngine
 import com.github.pwoicik.torrentapp.data.datastore.SettingsDataStore
 import com.github.pwoicik.torrentapp.data.datastore.SettingsSerializer
 import com.github.pwoicik.torrentapp.data.usecase.GetDownloadSettingsUseCaseImpl
 import com.github.pwoicik.torrentapp.data.usecase.GetMagnetMetadataUseCaseImpl
 import com.github.pwoicik.torrentapp.data.usecase.GetSessionInfoUseCaseImpl
-import com.github.pwoicik.torrentapp.data.usecase.GetTorrentTransferStatsUseCaseImpl
 import com.github.pwoicik.torrentapp.data.usecase.GetTorrentsUseCaseImpl
 import com.github.pwoicik.torrentapp.data.usecase.ParseMagnetUseCaseImpl
-import com.github.pwoicik.torrentapp.data.usecase.PlayPauseTorrentUseCaseImpl
 import com.github.pwoicik.torrentapp.data.usecase.SaveDownloadSettingsUseCaseImpl
 import com.github.pwoicik.torrentapp.data.usecase.SaveMagnetUseCaseImpl
 import com.github.pwoicik.torrentapp.db.Database
 import com.github.pwoicik.torrentapp.domain.usecase.GetDownloadSettingsUseCase
 import com.github.pwoicik.torrentapp.domain.usecase.GetMagnetMetadataUseCase
 import com.github.pwoicik.torrentapp.domain.usecase.GetSessionInfoUseCase
-import com.github.pwoicik.torrentapp.domain.usecase.GetTorrentTransferStatsUseCase
 import com.github.pwoicik.torrentapp.domain.usecase.GetTorrentsUseCase
 import com.github.pwoicik.torrentapp.domain.usecase.ParseMagnetUseCase
-import com.github.pwoicik.torrentapp.domain.usecase.PlayPauseTorrentUseCase
 import com.github.pwoicik.torrentapp.domain.usecase.SaveDownloadSettingsUseCase
 import com.github.pwoicik.torrentapp.domain.usecase.SaveMagnetUseCase
 import com.github.pwoicik.torrentapp.ui.addtorrent.AddTorrentContent
@@ -91,12 +86,6 @@ interface UseCaseComponent {
 
     val SaveDownloadSettingsUseCaseImpl.bind: SaveDownloadSettingsUseCase
         @Provides get() = this
-
-    val GetTorrentTransferStatsUseCaseImpl.bind: GetTorrentTransferStatsUseCase
-        @Provides get() = this
-
-    val PlayPauseTorrentUseCaseImpl.bind: PlayPauseTorrentUseCase
-        @Provides get() = this
 }
 
 interface UiComponent {
@@ -113,11 +102,10 @@ interface UiComponent {
         parseMagnet: () -> ParseMagnetUseCase,
         getTorrents: () -> GetTorrentsUseCase,
         getSessionInfo: () -> GetSessionInfoUseCase,
-        playPauseTorrent: () -> PlayPauseTorrentUseCase,
     ) = Presenter.Factory { screen, navigator, _ ->
         when (screen) {
             is MainScreen,
-            -> presenterOf { MainPresenter(navigator, getTorrents(), playPauseTorrent()) }
+            -> presenterOf { MainPresenter(navigator, getTorrents()) }
 
             is SessionStatsScreen,
             -> presenterOf { SessionStatsPresenter(navigator, getSessionInfo()) }
@@ -130,12 +118,12 @@ interface UiComponent {
     }
 
     @[Provides IntoSet]
-    fun mainUiFactory(getTorrentTransferStats: () -> GetTorrentTransferStatsUseCase) =
+    fun mainUiFactory() =
         Ui.Factory { screen, _ ->
             when (screen) {
                 is MainScreen,
                 -> ui<MainScreen.State> { state, modifier ->
-                    MainContent(state, getTorrentTransferStats(), modifier)
+                    MainContent(state, modifier)
                 }
 
                 is SessionStatsScreen,
@@ -235,17 +223,14 @@ interface DataComponent {
             ) { context.dataStoreFile("settings.pb").absolutePath.toPath() },
         )
 
-    @AppScope
     @Provides
-    fun torrentSession() = SessionManager(false)
+    fun torrentSession(engine: TorrentEngine) = engine.session
 
     val sessionManager: SessionManager
 }
 
 private typealias ActivityBinding = Pair<KClass<out Activity>, () -> Activity>
 private typealias ServiceBinding = Pair<KClass<out Service>, () -> Service>
-private typealias WorkerBinding =
-    Pair<KClass<out ListenableWorker>, (Context, WorkerParameters) -> ListenableWorker>
 
 interface AndroidComponent {
     @[Provides IntoMap]
@@ -256,19 +241,10 @@ interface AndroidComponent {
     fun torrentService(provider: () -> TorrentService): ServiceBinding =
         TorrentService::class to provider
 
-    @[Provides IntoMap]
-    fun restoreSessionWorker(
-        provider: (Context, WorkerParameters) -> RestoreSessionWorker,
-    ): WorkerBinding = RestoreSessionWorker::class to provider
-
-    @[Provides IntoMap]
-    fun closeSessionWorker(
-        provider: (Context, WorkerParameters) -> CloseSessionWorker,
-    ): WorkerBinding = CloseSessionWorker::class to provider
-
     val activities: Map<KClass<out Activity>, () -> Activity>
     val services: Map<KClass<out Service>, () -> Service>
     val workers: Map<KClass<out ListenableWorker>, (Context, WorkerParameters) -> ListenableWorker>
+        get() = emptyMap()
 }
 
 @AppScope

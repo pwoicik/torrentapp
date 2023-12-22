@@ -53,14 +53,10 @@ import androidx.compose.ui.text.style.TextMotion
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.github.pwoicik.torrentapp.ApplicationConstants
-import com.github.pwoicik.torrentapp.domain.model.SavedTorrent
-import com.github.pwoicik.torrentapp.domain.model.Sha1Hash
+import com.github.pwoicik.torrentapp.domain.model.Torrent
 import com.github.pwoicik.torrentapp.domain.model.TorrentState
 import com.github.pwoicik.torrentapp.domain.model.TorrentTransferStats
-import com.github.pwoicik.torrentapp.domain.usecase.GetTorrentTransferStatsUseCase
 import com.github.pwoicik.torrentapp.domain.usecase.GetTorrentsUseCase
-import com.github.pwoicik.torrentapp.domain.usecase.PlayPauseTorrentInput
-import com.github.pwoicik.torrentapp.domain.usecase.PlayPauseTorrentUseCase
 import com.github.pwoicik.torrentapp.domain.usecase.invoke
 import com.github.pwoicik.torrentapp.ui.main.MainScreen.Event
 import com.github.pwoicik.torrentapp.ui.settings.SettingsScreen
@@ -78,7 +74,7 @@ import kotlinx.parcelize.Parcelize
 @Parcelize
 data object MainScreen : Screen {
     data class State(
-        val torrents: List<SavedTorrent>?,
+        val torrents: List<Torrent>?,
         val event: (Event) -> Unit,
     ) : CircuitUiState {
         operator fun invoke(event: Event) = event(event)
@@ -86,52 +82,23 @@ data object MainScreen : Screen {
 
     sealed interface Event : CircuitUiEvent {
         data class ChildNav(val value: NavEvent.GoTo) : Event
-        data class TorrentPaused(val hash: Sha1Hash) : Event
-        data class TorrentResumed(val hash: Sha1Hash) : Event
     }
 }
 
 @Composable
-fun MainPresenter(
-    navigator: Navigator,
-    getTorrents: GetTorrentsUseCase,
-    playPauseTorrent: PlayPauseTorrentUseCase,
-): MainScreen.State {
+fun MainPresenter(navigator: Navigator, getTorrents: GetTorrentsUseCase): MainScreen.State {
     val torrents by getTorrents().collectAsStateWithLifecycle(initialValue = null)
-    val coroutineScope = rememberCoroutineScope()
     return MainScreen.State(
         torrents = torrents,
     ) {
         when (it) {
             is Event.ChildNav -> navigator.onNavEvent(it.value)
-
-            is Event.TorrentPaused -> coroutineScope.launch {
-                playPauseTorrent(
-                    PlayPauseTorrentInput(
-                        action = PlayPauseTorrentInput.Action.Pause,
-                        hash = it.hash,
-                    ),
-                )
-            }
-
-            is Event.TorrentResumed -> coroutineScope.launch {
-                playPauseTorrent(
-                    PlayPauseTorrentInput(
-                        action = PlayPauseTorrentInput.Action.Play,
-                        hash = it.hash,
-                    ),
-                )
-            }
         }
     }
 }
 
 @Composable
-fun MainContent(
-    uiState: MainScreen.State,
-    getTorrentTransferStats: GetTorrentTransferStatsUseCase,
-    modifier: Modifier = Modifier,
-) {
+fun MainContent(uiState: MainScreen.State, modifier: Modifier = Modifier) {
     val context = LocalContext.current
     Scaffold(
         topBar = {
@@ -169,27 +136,16 @@ fun MainContent(
     ) { innerPadding ->
         LazyColumn(contentPadding = innerPadding) {
             items(uiState.torrents.orEmpty()) {
-                Torrent(
-                    torrent = it,
-                    stats = getTorrentTransferStats(it.hash)
-                        .collectAsStateWithLifecycle(TorrentTransferStats())
-                        .value,
-                    onPause = { uiState(Event.TorrentPaused(it.hash)) },
-                    onResume = { uiState(Event.TorrentResumed(it.hash)) },
-                )
+                Torrent(torrent = it)
             }
         }
     }
 }
 
 @Composable
-private fun Torrent(
-    torrent: SavedTorrent,
-    stats: TorrentTransferStats,
-    onPause: () -> Unit,
-    onResume: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
+private fun Torrent(torrent: Torrent, modifier: Modifier = Modifier) {
+    val stats by torrent.transferStats.collectAsStateWithLifecycle(TorrentTransferStats())
+    val coroutineScope = rememberCoroutineScope()
     Row(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         modifier = modifier.padding(12.dp, 12.dp, 18.dp, 12.dp),
@@ -197,10 +153,12 @@ private fun Torrent(
         PlayPauseButton(
             paused = stats.state.isPaused,
             onClick = {
-                if (stats.state.isPaused) {
-                    onResume()
-                } else {
-                    onPause()
+                coroutineScope.launch {
+                    if (stats.state.isPaused) {
+                        torrent.resume()
+                    } else {
+                        torrent.pause()
+                    }
                 }
             },
             modifier = Modifier.align(Alignment.CenterVertically),
