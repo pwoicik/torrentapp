@@ -56,7 +56,6 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
 import arrow.core.getOrElse
 import com.github.pwoicik.torrentapp.domain.model.MagnetInfo
 import com.github.pwoicik.torrentapp.domain.model.MagnetMetadata
@@ -69,6 +68,7 @@ import com.github.pwoicik.torrentapp.proto.Settings
 import com.github.pwoicik.torrentapp.ui.addtorrent.AddTorrentScreen.Event
 import com.github.pwoicik.torrentapp.ui.addtorrent.AddTorrentScreen.State
 import com.github.pwoicik.torrentapp.ui.util.formatSize
+import com.slack.circuit.overlay.LocalOverlayHost
 import com.slack.circuit.runtime.CircuitUiEvent
 import com.slack.circuit.runtime.CircuitUiState
 import com.slack.circuit.runtime.Navigator
@@ -419,14 +419,8 @@ private fun TorrentInfo(info: MagnetMetadata, modifier: Modifier = Modifier) {
 
 @Composable
 private fun FilesInfo(info: MagnetMetadata, modifier: Modifier = Modifier) {
-    var visible by remember { mutableStateOf(false) }
-    if (visible) {
-        Dialog(onDismissRequest = { visible = false }) {
-            Column {
-                // TODO
-            }
-        }
-    }
+    val overlayHost = LocalOverlayHost.current
+    val coroutineScope = rememberCoroutineScope()
     Column(
         modifier = modifier
             .background(
@@ -439,7 +433,11 @@ private fun FilesInfo(info: MagnetMetadata, modifier: Modifier = Modifier) {
             modifier = Modifier
                 .clip(RoundedCornerShape(12.dp))
                 .background(MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp))
-                .clickable(role = Role.Button) { visible = true }
+                .clickable(role = Role.Button) {
+                    coroutineScope.launch {
+                        overlayHost.show(FileStructureOverlay(info))
+                    }
+                }
                 .padding(ContentPadding),
         ) {
             Text(
