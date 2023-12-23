@@ -9,7 +9,6 @@ import com.github.pwoicik.torrentapp.di.AppScope
 import com.github.pwoicik.torrentapp.di.IoDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.consumeEach
 import kotlinx.coroutines.coroutineScope
@@ -36,6 +35,7 @@ class TorrentEngine(
     private val db: Database,
     ioDispatcher: IoDispatcher,
 ) {
+    // DO NOT CANCEL THIS SCOPE, EVER
     private val lifecycleScope = CoroutineScope(SupervisorJob() + ioDispatcher)
 
     val session = SessionManager(false)
@@ -75,7 +75,6 @@ class TorrentEngine(
             session.pause()
             saveResumeData()
             session.stop()
-            lifecycleScope.cancel()
         }.join()
 
     private fun readResumeData(node: BDecodeNode): AddTorrentParams? {
