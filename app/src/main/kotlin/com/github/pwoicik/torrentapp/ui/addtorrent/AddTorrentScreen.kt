@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -33,6 +32,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -71,6 +71,7 @@ import kotlinx.parcelize.Parcelize
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
 
 @Parcelize
 data class AddTorrentScreen(
@@ -175,24 +176,9 @@ fun AddTorrentContent(
     uiState: State,
     modifier: Modifier = Modifier,
 ) {
-    Box(
-        modifier = modifier
-            .background(MaterialTheme.colorScheme.background)
-            .fillMaxSize(),
-    ) {
-        if (uiState !is State.Loaded) return
-        FloatingActionButton(
-            onClick = { uiState(Event.DownloadClicked) },
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(24.dp),
-        ) {
-            Icon(imageVector = Icons.Default.Download, contentDescription = null)
-        }
-        // TODO: fix insets
-        Column(
-            modifier = Modifier.verticalScroll(rememberScrollState()),
-        ) {
+    if (uiState !is State.Loaded) return
+    Scaffold(
+        topBar = {
             TopAppBar(
                 title = { Text("Add torrent") },
                 navigationIcon = {
@@ -201,22 +187,31 @@ fun AddTorrentContent(
                     }
                 },
             )
+        },
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = { uiState(Event.DownloadClicked) },
+            ) {
+                Icon(imageVector = Icons.Default.Download, contentDescription = null)
+            }
+        },
+        modifier = modifier,
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .padding(innerPadding)
+                .verticalScroll(rememberScrollState()),
+        ) {
             Box(Modifier.height(4.dp)) {
                 if (uiState.metadata == null) {
                     LinearProgressIndicator(Modifier.fillMaxWidth())
                 }
             }
-            screen.magnet.let {
-                Column(
-                    modifier = Modifier.padding(12.dp),
-                ) {
-                    Text(
-                        text = "Name",
-                        style = MaterialTheme.typography.labelMedium,
-                    )
-                    Text(it.name)
-                }
-            }
+            LabeledValue(
+                label = "Name",
+                value = screen.magnet.name,
+                isSelectable = true,
+            )
             Checkbox(
                 checked = uiState.startImmediately,
                 onCheckedChange = { uiState(Event.StartImmediatelyClicked) },
@@ -319,6 +314,7 @@ private fun ContentLayoutPicker(
         Text(
             text = "Content layout",
             style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.alignByBaseline(),
         )
         Box(Modifier.alignByBaseline()) {
@@ -373,87 +369,72 @@ private fun ContentLayoutPicker(
 private fun TorrentInfo(info: MagnetMetadata, modifier: Modifier = Modifier) {
     Column(modifier) {
         Row {
-            info.creator?.let { creator ->
-                Column(
-                    modifier = Modifier
-                        .padding(12.dp)
-                        .weight(1f),
-                ) {
-                    Text(
-                        text = "Created by",
-                        style = MaterialTheme.typography.labelMedium,
-                    )
-                    Text(creator)
-                }
+            info.creator?.let {
+                LabeledValue(
+                    label = "Created by",
+                    value = it,
+                    modifier = Modifier.weight(1f),
+                )
             }
-            info.creationDate?.let { instant ->
-                Column(
-                    modifier = Modifier
-                        .padding(12.dp)
-                        .weight(1f),
-                ) {
-                    Text(
-                        text = "Created on",
-                        style = MaterialTheme.typography.labelMedium,
-                    )
-                    // TODO: formatting
-                    Text(
-                        text = LocalDateTime.ofInstant(
-                            instant,
-                            ZoneId.systemDefault(),
-                        ).format(DateTimeFormatter.ISO_DATE_TIME),
-                    )
-                }
+            info.creationDate?.let {
+                LabeledValue(
+                    label = "Created on",
+                    value = LocalDateTime.ofInstant(
+                        it,
+                        ZoneId.systemDefault(),
+                    ).format(DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM)),
+                    modifier = Modifier.weight(1f),
+                )
             }
         }
         Row {
-            Column(
-                modifier = Modifier
-                    .padding(12.dp)
-                    .weight(1f),
-            ) {
-                Text(
-                    text = "Files",
-                    style = MaterialTheme.typography.labelMedium,
-                )
-                Text(info.numberOfFiles.toString())
-            }
-            Column(
-                modifier = Modifier
-                    .padding(12.dp)
-                    .weight(1f),
-            ) {
-                Text(
-                    text = "Size",
-                    style = MaterialTheme.typography.labelMedium,
-                )
-                Text(info.totalSize.formatSize())
-            }
-        }
-        Column(
-            modifier = Modifier.padding(12.dp),
-        ) {
-            Text(
-                text = "Pieces",
-                style = MaterialTheme.typography.labelMedium,
+            LabeledValue(
+                label = "Files",
+                value = info.numberOfFiles.toString(),
+                modifier = Modifier.weight(1f),
             )
-            Text(
-                text = "%d x %s".format(
-                    info.numberOfPieces,
-                    info.pieceSize.formatSize(),
-                ),
+            LabeledValue(
+                label = "Size",
+                value = info.totalSize.formatSize(),
+                modifier = Modifier.weight(1f),
             )
         }
-        Column(
-            modifier = Modifier.padding(12.dp),
-        ) {
-            Text(
-                text = "Hash",
-                style = MaterialTheme.typography.labelMedium,
-            )
+        LabeledValue(
+            label = "Pieces",
+            value = "%d x %s".format(
+                info.numberOfPieces,
+                info.pieceSize.formatSize(),
+            ),
+        )
+        LabeledValue(
+            label = "Hash",
+            value = info.hash.value,
+            isSelectable = true,
+        )
+    }
+}
+
+@Composable
+private fun LabeledValue(
+    label: String,
+    value: String,
+    modifier: Modifier = Modifier,
+    isSelectable: Boolean = false,
+) {
+    Column(
+        modifier = modifier.padding(12.dp),
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        if (isSelectable) {
             SelectionContainer {
-                Text(info.hash.value)
+                Text(value)
             }
+        } else {
+            Text(value)
         }
     }
 }
