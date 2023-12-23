@@ -1,15 +1,21 @@
 package com.github.pwoicik.torrentapp.data.usecase
 
+import android.util.Log
 import arrow.core.Either
 import arrow.core.right
 import com.github.pwoicik.torrentapp.di.ApplicationContext
+import com.github.pwoicik.torrentapp.di.DefaultDispatcher
 import com.github.pwoicik.torrentapp.di.IoDispatcher
 import com.github.pwoicik.torrentapp.domain.model.ByteSize
 import com.github.pwoicik.torrentapp.domain.model.MagnetInfo
 import com.github.pwoicik.torrentapp.domain.model.MagnetMetadata
 import com.github.pwoicik.torrentapp.domain.model.Sha1Hash
+import com.github.pwoicik.torrentapp.domain.model.Storage
 import com.github.pwoicik.torrentapp.domain.usecase.GetMagnetMetadataError
 import com.github.pwoicik.torrentapp.domain.usecase.GetMagnetMetadataUseCase
+import com.github.pwoicik.torrentapp.ui.util.toByteSize
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.adapters.ImmutableListAdapter
 import kotlinx.coroutines.withContext
 import me.tatarka.inject.annotations.Inject
 import org.libtorrent4j.SessionManager
@@ -21,15 +27,17 @@ class GetMagnetMetadataUseCaseImpl(
     private val session: SessionManager,
     private val context: ApplicationContext,
     private val ioDispatcher: IoDispatcher,
+    private val defaultDispatcher: DefaultDispatcher,
 ) : GetMagnetMetadataUseCase {
     override suspend fun invoke(input: MagnetInfo): Either<GetMagnetMetadataError, MagnetMetadata> {
-        val info = withContext(ioDispatcher) {
+        val data = withContext(ioDispatcher) {
             session.fetchMagnet(
                 input.uri.value,
                 Int.MAX_VALUE,
                 context.cacheDir,
-            ).let(TorrentInfo::bdecode)
+            )
         }
+        val info = TorrentInfo.bdecode(data)
         val hash = info.infoHashes().best.toHex()
         return MagnetMetadata(
             name = info.name()?.takeIf { it.isNotBlank() } ?: hash,
@@ -42,6 +50,83 @@ class GetMagnetMetadataUseCaseImpl(
             numberOfPieces = info.numPieces(),
             pieceSize = info.pieceLength().toLong().let(::ByteSize),
             hash = hash.let(::Sha1Hash),
+            files = withContext(defaultDispatcher) { info.buildStorage() },
         ).right()
     }
+}
+
+private fun TorrentInfo.buildStorage(): ImmutableList<Storage> {
+    val files = files()
+    return buildStorage(
+        List(files.numFiles()) {
+            Pair(
+                files.filePath(it).split('/'),
+                files.fileSize(it).toByteSize(),
+            )
+        },
+    ).also { Log.d("test", Storage.Directory("", it).size.toString()) }
+}
+
+private typealias Path = List<String>
+private typealias SizedPath = Pair<Path, ByteSize>
+
+fun buildStorage(sizedPaths: List<SizedPath>): ImmutableList<Storage> {
+    val (files, nested) = sizedPaths.partition { it.first.size == 1 }
+    val storage = ArrayList<Storage>(files.size + nested.size)
+    files.mapTo(storage) { (path, size) ->
+        assert(path.size == 1)
+        Storage.File(
+            name = path.first(),
+            size = size,
+        )
+    }
+    val nestedDirectories: Map<String, List<SizedPath>> = nested.groupBy(
+        keySelector = { (path, _) -> path.first() },
+        valueTransform = { it.copy(it.first.drop(1)) },
+    )
+    nestedDirectories.forEach { (name, sizedPath) ->
+        storage.add(
+            Storage.Directory(name, buildStorage(sizedPath)),
+        )
+    }
+    return ImmutableListAdapter(storage)
+}
+
+// TODO: check which implementation performs better
+fun buildStorage2(sizedPaths: List<SizedPath>): ImmutableList<Storage> {
+    val (files, nested) = sizedPaths.partition { it.first.size == 1 }
+    val storage = ArrayList<Storage>(files.size + nested.size)
+    files.mapTo(storage) { (path, size) ->
+        Storage.File(
+            name = path.first(),
+            size = size,
+        )
+    }
+    if (nested.isEmpty()) return ImmutableListAdapter(storage)
+    val nestedFiles = mutableMapOf<List<String>, MutableList<Storage>>()
+    nested.groupByTo(
+        destination = nestedFiles,
+        keySelector = { it.first.dropLast(1) },
+        valueTransform = { (fullPath, size) ->
+            Storage.File(
+                name = fullPath.last(),
+                size = size,
+            )
+        },
+    )
+    while (true) {
+        val maxPathSize = nestedFiles.maxOf { it.key.size }
+        if (maxPathSize == 0) break
+        nestedFiles.filter { it.key.size == maxPathSize }.forEach { (fullPath, dirs) ->
+            val path = fullPath.dropLast(1)
+            nestedFiles.remove(fullPath)
+            val dir = Storage.Directory(
+                name = fullPath.last(),
+                content = ImmutableListAdapter(dirs),
+            )
+            nestedFiles[path] = nestedFiles[path]?.apply { add(dir) } ?: mutableListOf(dir)
+        }
+    }
+    nestedFiles.values.forEach(storage::addAll)
+    return ImmutableListAdapter(storage)
 }

@@ -9,6 +9,7 @@ import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -19,6 +20,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.ArrowBackIosNew
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Folder
@@ -35,6 +37,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -46,9 +49,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import arrow.core.getOrElse
 import com.github.pwoicik.torrentapp.domain.model.MagnetInfo
 import com.github.pwoicik.torrentapp.domain.model.MagnetMetadata
@@ -170,6 +178,8 @@ fun AddTorrentPresenter(
     }
 }
 
+private val ContentPadding = PaddingValues(18.dp, 12.dp)
+
 @Composable
 fun AddTorrentContent(
     screen: AddTorrentScreen,
@@ -252,6 +262,7 @@ private fun Checkbox(
         verticalAlignment = Alignment.CenterVertically,
         modifier = modifier
             .fillMaxWidth()
+            .padding(start = 6.dp, end = 18.dp)
             .clip(RoundedCornerShape(12.dp))
             .clickable { onCheckedChange() },
     ) {
@@ -289,7 +300,7 @@ private fun DirectoryPicker(selected: String) {
         interactionSource = interactionSource,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(12.dp),
+            .padding(ContentPadding),
     )
     LaunchedEffect(Unit) {
         interactionSource.interactions.collect {
@@ -309,7 +320,7 @@ private fun ContentLayoutPicker(
 ) {
     Row(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
-        modifier = modifier.padding(12.dp),
+        modifier = modifier.padding(ContentPadding),
     ) {
         Text(
             text = "Content layout",
@@ -387,18 +398,10 @@ private fun TorrentInfo(info: MagnetMetadata, modifier: Modifier = Modifier) {
                 )
             }
         }
-        Row {
-            LabeledValue(
-                label = "Files",
-                value = info.numberOfFiles.toString(),
-                modifier = Modifier.weight(1f),
-            )
-            LabeledValue(
-                label = "Size",
-                value = info.totalSize.formatSize(),
-                modifier = Modifier.weight(1f),
-            )
-        }
+        FilesInfo(
+            info = info,
+            modifier = Modifier.padding(top = 6.dp),
+        )
         LabeledValue(
             label = "Pieces",
             value = "%d x %s".format(
@@ -415,6 +418,64 @@ private fun TorrentInfo(info: MagnetMetadata, modifier: Modifier = Modifier) {
 }
 
 @Composable
+private fun FilesInfo(info: MagnetMetadata, modifier: Modifier = Modifier) {
+    var visible by remember { mutableStateOf(false) }
+    if (visible) {
+        Dialog(onDismissRequest = { visible = false }) {
+            Column {
+                // TODO
+            }
+        }
+    }
+    Column(
+        modifier = modifier
+            .background(
+                color = MaterialTheme.colorScheme.surfaceColorAtElevation(0.5.dp),
+                shape = RoundedCornerShape(12.dp),
+            ),
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .clip(RoundedCornerShape(12.dp))
+                .background(MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp))
+                .clickable(role = Role.Button) { visible = true }
+                .padding(ContentPadding),
+        ) {
+            Text(
+                text = "Files",
+                modifier = Modifier.weight(1f),
+            )
+            Icon(
+                imageVector = Icons.AutoMirrored.Default.ArrowForward,
+                contentDescription = null,
+            )
+        }
+        Row {
+            LabeledValue(
+                label = "Selected",
+                value = buildAnnotatedString {
+                    append(info.numberOfFiles.toString())
+                    withStyle(
+                        MaterialTheme.typography.labelMedium.toSpanStyle()
+                            .copy(MaterialTheme.colorScheme.onSurfaceVariant),
+                    ) {
+                        append("  out of  ")
+                    }
+                    append(info.numberOfFiles.toString())
+                },
+                modifier = Modifier.weight(1f),
+            )
+            LabeledValue(
+                label = "Size",
+                value = info.totalSize.formatSize(),
+                modifier = Modifier.weight(1f),
+            )
+        }
+    }
+}
+
+@Composable
 private fun LabeledValue(
     label: String,
     value: String,
@@ -422,7 +483,32 @@ private fun LabeledValue(
     isSelectable: Boolean = false,
 ) {
     Column(
-        modifier = modifier.padding(12.dp),
+        modifier = modifier.padding(ContentPadding),
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        if (isSelectable) {
+            SelectionContainer {
+                Text(value)
+            }
+        } else {
+            Text(value)
+        }
+    }
+}
+
+@Composable
+private fun LabeledValue(
+    label: String,
+    value: AnnotatedString,
+    modifier: Modifier = Modifier,
+    isSelectable: Boolean = false,
+) {
+    Column(
+        modifier = modifier.padding(ContentPadding),
     ) {
         Text(
             text = label,

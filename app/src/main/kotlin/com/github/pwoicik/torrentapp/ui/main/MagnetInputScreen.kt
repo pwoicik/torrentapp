@@ -102,6 +102,7 @@ fun MagnetInput(uiState: MagnetInputScreen.State, modifier: Modifier = Modifier)
         val focusRequester = remember { FocusRequester() }
         OutlinedTextField(
             value = uiState.magnet,
+            maxLines = 10,
             onValueChange = { uiState(Event.MagnetChanged(it)) },
             modifier = Modifier
                 .fillMaxWidth()
