@@ -13,12 +13,13 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
@@ -128,21 +129,23 @@ private fun FileStructure(
     onOpenDirectory: (Storage.Directory) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(
-        modifier.background(MaterialTheme.colorScheme.surface),
+    LazyColumn(
+        modifier = modifier.background(MaterialTheme.colorScheme.surface),
     ) {
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(24.dp))
-                .clickable(role = Role.Button) { onGoUp() }
-                .padding(12.dp),
-        ) {
-            Icon(imageVector = Icons.Default.KeyboardDoubleArrowUp, contentDescription = null)
-            Text("(Go up)")
+        item {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(24.dp))
+                    .clickable(role = Role.Button) { onGoUp() }
+                    .padding(12.dp),
+            ) {
+                Icon(imageVector = Icons.Default.KeyboardDoubleArrowUp, contentDescription = null)
+                Text("(Go up)")
+            }
         }
-        storage.forEach {
+        items(storage) {
             when (it) {
                 is Storage.File -> {
                     Row(

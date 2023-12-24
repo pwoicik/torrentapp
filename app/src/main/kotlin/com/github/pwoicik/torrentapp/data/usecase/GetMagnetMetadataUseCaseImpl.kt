@@ -74,29 +74,6 @@ fun buildStorage(sizedPaths: List<SizedPath>): ImmutableList<Storage> {
     val (files, nested) = sizedPaths.partition { it.first.size == 1 }
     val storage = ArrayList<Storage>(files.size + nested.size)
     files.mapTo(storage) { (path, size) ->
-        assert(path.size == 1)
-        Storage.File(
-            name = path.first(),
-            size = size,
-        )
-    }
-    val nestedDirectories: Map<String, List<SizedPath>> = nested.groupBy(
-        keySelector = { (path, _) -> path.first() },
-        valueTransform = { it.copy(it.first.drop(1)) },
-    )
-    nestedDirectories.forEach { (name, sizedPath) ->
-        storage.add(
-            Storage.Directory(name, buildStorage(sizedPath)),
-        )
-    }
-    return ImmutableListAdapter(storage)
-}
-
-// TODO: check which implementation performs better
-fun buildStorage2(sizedPaths: List<SizedPath>): ImmutableList<Storage> {
-    val (files, nested) = sizedPaths.partition { it.first.size == 1 }
-    val storage = ArrayList<Storage>(files.size + nested.size)
-    files.mapTo(storage) { (path, size) ->
         Storage.File(
             name = path.first(),
             size = size,
@@ -114,8 +91,8 @@ fun buildStorage2(sizedPaths: List<SizedPath>): ImmutableList<Storage> {
             )
         },
     )
+    var maxPathSize = nestedFiles.maxOf { it.key.size }
     while (true) {
-        val maxPathSize = nestedFiles.maxOf { it.key.size }
         if (maxPathSize == 0) break
         nestedFiles.filter { it.key.size == maxPathSize }.forEach { (fullPath, dirs) ->
             val path = fullPath.dropLast(1)
@@ -124,9 +101,29 @@ fun buildStorage2(sizedPaths: List<SizedPath>): ImmutableList<Storage> {
                 name = fullPath.last(),
                 content = ImmutableListAdapter(dirs),
             )
-            nestedFiles[path] = nestedFiles[path]?.apply { add(dir) } ?: mutableListOf(dir)
+            nestedFiles[path] = nestedFiles[path]
+                ?.apply {
+                    add(dir)
+                    sortWith(StorageComparator)
+                }
+                ?: mutableListOf(dir)
         }
+        --maxPathSize
     }
     nestedFiles.values.forEach(storage::addAll)
     return ImmutableListAdapter(storage)
+}
+
+private object StorageComparator : Comparator<Storage> {
+    override fun compare(o1: Storage, o2: Storage): Int {
+        return if (o1 is Storage.Directory && o2 is Storage.Directory) {
+            o1.name.compareTo(o2.name)
+        } else if (o1 is Storage.Directory) {
+            -1
+        } else if (o2 is Storage.Directory) {
+            1
+        } else {
+            (o1 as Storage.File).name.compareTo((o2 as Storage.File).name, ignoreCase = true)
+        }
+    }
 }

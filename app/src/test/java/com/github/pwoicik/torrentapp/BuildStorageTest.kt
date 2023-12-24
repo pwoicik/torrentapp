@@ -1,7 +1,6 @@
 package com.github.pwoicik.torrentapp
 
 import com.github.pwoicik.torrentapp.data.usecase.buildStorage
-import com.github.pwoicik.torrentapp.data.usecase.buildStorage2
 import com.github.pwoicik.torrentapp.domain.model.ByteSize
 import com.github.pwoicik.torrentapp.domain.model.Storage
 import kotlinx.collections.immutable.persistentListOf
@@ -17,11 +16,6 @@ class BuildStorageTest {
     @Test
     fun `buildStorage produces correct file tree`() {
         assertEquals(params.second, buildStorage(params.first).toSet())
-    }
-
-    @Test
-    fun `buildStorage2 produces correct file tree`() {
-        assertEquals(params.second, buildStorage2(params.first).toSet())
     }
 
     private val params = Pair(
