@@ -21,7 +21,6 @@ import org.libtorrent4j.SessionManager
 import org.libtorrent4j.TorrentFlags
 import org.libtorrent4j.TorrentHandle
 import org.libtorrent4j.TorrentStatus
-import java.util.Objects
 import kotlin.coroutines.coroutineContext
 import kotlin.time.Duration.Companion.seconds
 
@@ -115,7 +114,11 @@ private class TorrentImpl(
         return hash == other.hash && name == other.name
     }
 
-    override fun hashCode(): Int = Objects.hash(hash, name)
+    override fun hashCode(): Int {
+        var result = hash.hashCode()
+        result = 31 * result + name.hashCode()
+        return result
+    }
 }
 
 /**

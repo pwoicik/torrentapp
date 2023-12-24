@@ -1,6 +1,9 @@
 package com.github.pwoicik.torrentapp.data.usecase
 
 import android.util.Log
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import arrow.core.Either
 import arrow.core.right
 import com.github.pwoicik.torrentapp.di.ApplicationContext
@@ -59,7 +62,8 @@ private fun TorrentInfo.buildStorage(): ImmutableList<Storage> {
     val files = files()
     return buildStorage(
         List(files.numFiles()) {
-            Pair(
+            Triple(
+                it,
                 files.filePath(it).split('/'),
                 files.fileSize(it).toByteSize(),
             )
@@ -68,13 +72,14 @@ private fun TorrentInfo.buildStorage(): ImmutableList<Storage> {
 }
 
 private typealias Path = List<String>
-private typealias SizedPath = Pair<Path, ByteSize>
+private typealias SizedPath = Triple<Int, Path, ByteSize>
 
 fun buildStorage(sizedPaths: List<SizedPath>): ImmutableList<Storage> {
-    val (files, nested) = sizedPaths.partition { it.first.size == 1 }
+    val (files, nested) = sizedPaths.partition { it.second.size == 1 }
     val storage = ArrayList<Storage>(files.size + nested.size)
-    files.mapTo(storage) { (path, size) ->
-        Storage.File(
+    files.mapTo(storage) { (idx, path, size) ->
+        FileImpl(
+            id = idx,
             name = path.first(),
             size = size,
         )
@@ -83,9 +88,10 @@ fun buildStorage(sizedPaths: List<SizedPath>): ImmutableList<Storage> {
     val nestedFiles = mutableMapOf<List<String>, MutableList<Storage>>()
     nested.groupByTo(
         destination = nestedFiles,
-        keySelector = { it.first.dropLast(1) },
-        valueTransform = { (fullPath, size) ->
-            Storage.File(
+        keySelector = { it.second.dropLast(1) },
+        valueTransform = { (idx, fullPath, size) ->
+            FileImpl(
+                id = idx,
                 name = fullPath.last(),
                 size = size,
             )
@@ -112,6 +118,15 @@ fun buildStorage(sizedPaths: List<SizedPath>): ImmutableList<Storage> {
     }
     nestedFiles.values.forEach(storage::addAll)
     return ImmutableListAdapter(storage)
+}
+
+private class FileImpl(
+    override val id: Int,
+    override val name: String,
+    override val size: ByteSize,
+    selected: Boolean = true,
+) : Storage.File {
+    override var selected: Boolean by mutableStateOf(selected)
 }
 
 private object StorageComparator : Comparator<Storage> {
