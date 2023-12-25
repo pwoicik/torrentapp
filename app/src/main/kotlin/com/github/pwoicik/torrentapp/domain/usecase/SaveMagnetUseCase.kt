@@ -1,9 +1,10 @@
 package com.github.pwoicik.torrentapp.domain.usecase
 
+import arrow.core.Either
 import com.github.pwoicik.torrentapp.domain.model.MagnetInfo
 import com.github.pwoicik.torrentapp.domain.model.MagnetMetadata
 
-typealias SaveMagnetUseCase = SuspendUseCase<SaveMagnetInput, Unit>
+typealias SaveMagnetUseCase = SuspendUseCase<SaveMagnetInput, Either<SaveMagnetError, Unit>>
 
 data class SaveMagnetInput(
     val info: MagnetInfo,
@@ -13,3 +14,7 @@ data class SaveMagnetInput(
     val prioritizeFirstAndLast: Boolean,
     val savePath: String,
 )
+
+sealed interface SaveMagnetError {
+    data object FileAlreadyExists : SaveMagnetError
+}

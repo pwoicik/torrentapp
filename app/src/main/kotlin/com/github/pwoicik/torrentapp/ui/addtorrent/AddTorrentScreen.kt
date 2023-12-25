@@ -35,6 +35,9 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.surfaceColorAtElevation
@@ -61,6 +64,7 @@ import com.github.pwoicik.torrentapp.domain.model.MagnetInfo
 import com.github.pwoicik.torrentapp.domain.model.MagnetMetadata
 import com.github.pwoicik.torrentapp.domain.usecase.GetDownloadSettingsUseCase
 import com.github.pwoicik.torrentapp.domain.usecase.GetMagnetMetadataUseCase
+import com.github.pwoicik.torrentapp.domain.usecase.SaveMagnetError
 import com.github.pwoicik.torrentapp.domain.usecase.SaveMagnetInput
 import com.github.pwoicik.torrentapp.domain.usecase.SaveMagnetUseCase
 import com.github.pwoicik.torrentapp.domain.usecase.invoke
@@ -95,6 +99,7 @@ data class AddTorrentScreen(
             val prioritizeFirstAndLast: Boolean,
             val savePath: String,
             val contentLayout: ContentLayout,
+            val error: SaveMagnetError? = null,
             val event: (Event) -> Unit,
         ) : State {
             operator fun invoke(event: Event) = event(event)
@@ -108,6 +113,7 @@ data class AddTorrentScreen(
         data object PrioritizeFirstAndLastClicked : Event
         data class ContentLayoutSelected(val value: ContentLayout) : Event
         data object DownloadClicked : Event
+        data object ErrorSeen : Event
     }
 }
 
@@ -136,6 +142,7 @@ fun AddTorrentPresenter(
     var sequentialDownload by remember { mutableStateOf(settings.sequential) }
     var prioritizeFirstAndLast by remember { mutableStateOf(settings.prioritizeFirstLast) }
     var contentLayout by remember { mutableStateOf(ContentLayout.Original) }
+    var saveMagnetError by remember { mutableStateOf<SaveMagnetError?>(null) }
     return State.Loaded(
         metadata = metadata,
         startImmediately = startImmediately,
@@ -143,8 +150,9 @@ fun AddTorrentPresenter(
         prioritizeFirstAndLast = prioritizeFirstAndLast,
         savePath = settings.savePath,
         contentLayout = contentLayout,
-    ) {
-        when (it) {
+        error = saveMagnetError,
+    ) { ev ->
+        when (ev) {
             Event.StartImmediatelyClicked,
             -> startImmediately = !startImmediately
 
@@ -158,7 +166,7 @@ fun AddTorrentPresenter(
             -> navigator.pop()
 
             is Event.ContentLayoutSelected,
-            -> contentLayout = it.value
+            -> contentLayout = ev.value
 
             Event.DownloadClicked,
             -> scope.launch {
@@ -171,9 +179,14 @@ fun AddTorrentPresenter(
                         prioritizeFirstAndLast = prioritizeFirstAndLast,
                         savePath = settings.savePath,
                     ),
+                ).fold(
+                    ifLeft = { saveMagnetError = it },
+                    ifRight = { navigator.pop() },
                 )
-                navigator.pop()
             }
+
+            Event.ErrorSeen,
+            -> saveMagnetError = null
         }
     }
 }
@@ -187,6 +200,7 @@ fun AddTorrentContent(
     modifier: Modifier = Modifier,
 ) {
     if (uiState !is State.Loaded) return
+    val snackbarHostState = remember { SnackbarHostState() }
     Scaffold(
         topBar = {
             TopAppBar(
@@ -203,6 +217,15 @@ fun AddTorrentContent(
                 onClick = { uiState(Event.DownloadClicked) },
             ) {
                 Icon(imageVector = Icons.Default.Download, contentDescription = null)
+            }
+        },
+        snackbarHost = {
+            SnackbarHost(snackbarHostState) {
+                Snackbar(
+                    snackbarData = it,
+                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                    contentColor = MaterialTheme.colorScheme.onErrorContainer,
+                )
             }
         },
         modifier = modifier,
@@ -246,6 +269,19 @@ fun AddTorrentContent(
             )
             AnimatedVisibility(visible = uiState.metadata != null) {
                 TorrentInfo(info = uiState.metadata!!)
+            }
+        }
+    }
+
+    LaunchedEffect(uiState.error) {
+        when (uiState.error) {
+            null -> Unit
+
+            SaveMagnetError.FileAlreadyExists -> {
+                snackbarHostState.showSnackbar(
+                    message = "File already exists!",
+                )
+                uiState(Event.ErrorSeen)
             }
         }
     }

@@ -1,7 +1,11 @@
 package com.github.pwoicik.torrentapp.data.usecase
 
+import arrow.core.Either
+import arrow.core.left
+import arrow.core.right
 import com.github.pwoicik.torrentapp.db.Database
 import com.github.pwoicik.torrentapp.di.IoDispatcher
+import com.github.pwoicik.torrentapp.domain.usecase.SaveMagnetError
 import com.github.pwoicik.torrentapp.domain.usecase.SaveMagnetInput
 import com.github.pwoicik.torrentapp.domain.usecase.SaveMagnetUseCase
 import kotlinx.coroutines.withContext
@@ -12,6 +16,9 @@ import org.libtorrent4j.SessionHandle
 import org.libtorrent4j.SessionManager
 import org.libtorrent4j.TorrentFlags
 import org.libtorrent4j.swig.error_code
+import java.nio.file.LinkOption
+import kotlin.io.path.Path
+import kotlin.io.path.exists
 
 @Inject
 class SaveMagnetUseCaseImpl(
@@ -19,7 +26,11 @@ class SaveMagnetUseCaseImpl(
     private val session: SessionManager,
     private val ioDispatcher: IoDispatcher,
 ) : SaveMagnetUseCase {
-    override suspend fun invoke(input: SaveMagnetInput) {
+    override suspend fun invoke(input: SaveMagnetInput): Either<SaveMagnetError, Unit> {
+        if (Path(input.savePath).exists(LinkOption.NOFOLLOW_LINKS)) {
+            return SaveMagnetError.FileAlreadyExists.left()
+        }
+
         db.torrentQueries.insert(
             hash = input.info.hash.value,
             name = input.info.name,
@@ -40,5 +51,7 @@ class SaveMagnetUseCaseImpl(
         if (input.startImmediately) {
             handle.resume()
         }
+
+        return Unit.right()
     }
 }
