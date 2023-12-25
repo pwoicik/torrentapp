@@ -83,6 +83,7 @@ android {
         options.optIn.addAll(
             "kotlinx.coroutines.FlowPreview",
             "androidx.compose.material3.ExperimentalMaterial3Api",
+            "kotlin.io.encoding.ExperimentalEncodingApi",
         )
     }
 

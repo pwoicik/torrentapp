@@ -27,7 +27,6 @@ import org.libtorrent4j.alerts.SaveResumeDataFailedAlert
 import org.libtorrent4j.swig.error_code
 import org.libtorrent4j.swig.libtorrent
 import kotlin.io.encoding.Base64
-import kotlin.io.encoding.ExperimentalEncodingApi
 
 @AppScope
 @Inject
@@ -57,7 +56,6 @@ class TorrentEngine(
         })
     }
 
-    @OptIn(ExperimentalEncodingApi::class)
     suspend fun start() =
         lifecycleScope.launch {
             session.start()
@@ -84,7 +82,6 @@ class TorrentEngine(
         return AddTorrentParams(params)
     }
 
-    @OptIn(ExperimentalEncodingApi::class)
     private suspend fun saveResumeData() =
         coroutineScope {
             val torrents = session.swig()._torrents.filter { it.need_save_resume_data() }

@@ -20,7 +20,6 @@ import org.libtorrent4j.TorrentFlags
 import org.libtorrent4j.swig.error_code
 import java.nio.file.LinkOption
 import kotlin.io.encoding.Base64
-import kotlin.io.encoding.ExperimentalEncodingApi
 import kotlin.io.path.Path
 import kotlin.io.path.exists
 
@@ -30,7 +29,6 @@ class SaveMagnetUseCaseImpl(
     private val session: SessionManager,
     private val ioDispatcher: IoDispatcher,
 ) : SaveMagnetUseCase {
-    @OptIn(ExperimentalEncodingApi::class)
     override suspend fun invoke(input: SaveMagnetInput): Either<SaveMagnetError, Unit> {
         if (Path(input.savePath, input.info.name).exists(LinkOption.NOFOLLOW_LINKS)) {
             return SaveMagnetError.FileAlreadyExists.left()
