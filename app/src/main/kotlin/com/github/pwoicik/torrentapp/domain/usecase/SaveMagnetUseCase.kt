@@ -17,4 +17,5 @@ data class SaveMagnetInput(
 
 sealed interface SaveMagnetError {
     data object FileAlreadyExists : SaveMagnetError
+    data class UnknownError(val message: String) : SaveMagnetError
 }

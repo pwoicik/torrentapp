@@ -2,11 +2,14 @@ package com.github.pwoicik.torrentapp.data.usecase
 
 import arrow.core.Either
 import arrow.core.left
+import arrow.core.raise.either
 import arrow.core.right
 import com.github.pwoicik.torrentapp.db.Database
 import com.github.pwoicik.torrentapp.di.IoDispatcher
 import com.github.pwoicik.torrentapp.domain.model.Storage
 import com.github.pwoicik.torrentapp.domain.usecase.SaveMagnetError
+import com.github.pwoicik.torrentapp.domain.usecase.SaveMagnetError.FileAlreadyExists
+import com.github.pwoicik.torrentapp.domain.usecase.SaveMagnetError.UnknownError
 import com.github.pwoicik.torrentapp.domain.usecase.SaveMagnetInput
 import com.github.pwoicik.torrentapp.domain.usecase.SaveMagnetUseCase
 import kotlinx.coroutines.withContext
@@ -31,7 +34,7 @@ class SaveMagnetUseCaseImpl(
 ) : SaveMagnetUseCase {
     override suspend fun invoke(input: SaveMagnetInput): Either<SaveMagnetError, Unit> {
         if (Path(input.savePath, input.info.name).exists(LinkOption.NOFOLLOW_LINKS)) {
-            return SaveMagnetError.FileAlreadyExists.left()
+            return FileAlreadyExists.left()
         }
 
         val params = AddTorrentParams.parseMagnetUri(input.info.uri.value).apply {
@@ -48,14 +51,20 @@ class SaveMagnetUseCaseImpl(
             savePath = input.savePath,
             resumeData = Base64.Default.encode(AddTorrentParams.writeResumeDataBuf(params)),
         )
-        val handle = withContext(ioDispatcher) {
-            SessionHandle(session.swig()).addTorrent(params, ErrorCode(error_code()))
+        return either {
+            val handle = withContext(ioDispatcher) {
+                val error = ErrorCode(error_code())
+                val th = SessionHandle(session.swig()).addTorrent(params, error)
+                if (error.isError) {
+                    UnknownError(error.message).left()
+                } else {
+                    th.right()
+                }
+            }.bind()
+            if (input.startImmediately) {
+                handle.resume()
+            }
         }
-        if (input.startImmediately) {
-            handle.resume()
-        }
-
-        return Unit.right()
     }
 }
 

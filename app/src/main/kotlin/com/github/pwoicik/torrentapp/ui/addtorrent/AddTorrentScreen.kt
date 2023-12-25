@@ -274,12 +274,21 @@ fun AddTorrentContent(
     }
 
     LaunchedEffect(uiState.error) {
-        when (uiState.error) {
-            null -> Unit
+        when (val err = uiState.error) {
+            null -> {
+                snackbarHostState.currentSnackbarData?.dismiss()
+            }
 
             SaveMagnetError.FileAlreadyExists -> {
                 snackbarHostState.showSnackbar(
                     message = "File already exists!",
+                )
+                uiState(Event.ErrorSeen)
+            }
+
+            is SaveMagnetError.UnknownError -> {
+                snackbarHostState.showSnackbar(
+                    message = err.message,
                 )
                 uiState(Event.ErrorSeen)
             }
