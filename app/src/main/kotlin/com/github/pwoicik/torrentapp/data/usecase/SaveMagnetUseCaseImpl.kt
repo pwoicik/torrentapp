@@ -1,10 +1,12 @@
 package com.github.pwoicik.torrentapp.data.usecase
 
+import android.util.Log
 import arrow.core.Either
 import arrow.core.left
 import arrow.core.right
 import com.github.pwoicik.torrentapp.db.Database
 import com.github.pwoicik.torrentapp.di.IoDispatcher
+import com.github.pwoicik.torrentapp.domain.model.Storage
 import com.github.pwoicik.torrentapp.domain.usecase.SaveMagnetError
 import com.github.pwoicik.torrentapp.domain.usecase.SaveMagnetInput
 import com.github.pwoicik.torrentapp.domain.usecase.SaveMagnetUseCase
@@ -12,6 +14,7 @@ import kotlinx.coroutines.withContext
 import me.tatarka.inject.annotations.Inject
 import org.libtorrent4j.AddTorrentParams
 import org.libtorrent4j.ErrorCode
+import org.libtorrent4j.Priority
 import org.libtorrent4j.SessionHandle
 import org.libtorrent4j.SessionManager
 import org.libtorrent4j.TorrentFlags
@@ -27,7 +30,7 @@ class SaveMagnetUseCaseImpl(
     private val ioDispatcher: IoDispatcher,
 ) : SaveMagnetUseCase {
     override suspend fun invoke(input: SaveMagnetInput): Either<SaveMagnetError, Unit> {
-        if (Path(input.savePath).exists(LinkOption.NOFOLLOW_LINKS)) {
+        if (Path(input.savePath, input.info.name).exists(LinkOption.NOFOLLOW_LINKS)) {
             return SaveMagnetError.FileAlreadyExists.left()
         }
 
@@ -44,6 +47,9 @@ class SaveMagnetUseCaseImpl(
                 AddTorrentParams.parseMagnetUri(input.info.uri.value).apply {
                     savePath = input.savePath
                     flags = flags.and_(TorrentFlags.AUTO_MANAGED.inv())
+                    input.metadata?.files?.toPriorities()
+                        .also { Log.d("test", it.toString()) }
+                        ?.let(::filePriorities)
                 },
                 ErrorCode(error_code()),
             )
@@ -54,4 +60,28 @@ class SaveMagnetUseCaseImpl(
 
         return Unit.right()
     }
+}
+
+private fun List<Storage>.toPriorities(): Array<Priority> {
+    val stack = ArrayDeque(this)
+    val files = mutableListOf<Storage.File>()
+    tailrec fun go() {
+        if (stack.isEmpty()) return
+        when (val node = stack.removeLast()) {
+            is Storage.Directory -> stack.addAll(node.content)
+            is Storage.File -> files.add(node)
+        }
+        go()
+    }
+    go()
+    val output = arrayOfNulls<Priority>(files.size)
+    files.forEach {
+        output[it.id] = if (it.selected) {
+            Priority.DEFAULT
+        } else {
+            Priority.IGNORE
+        }
+    }
+    @Suppress("UNCHECKED_CAST")
+    return output as Array<Priority>
 }
