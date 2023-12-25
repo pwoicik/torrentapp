@@ -1,7 +1,9 @@
 package com.github.pwoicik.torrentapp.domain.model
 
 import androidx.compose.runtime.Stable
-import com.github.pwoicik.torrentapp.ui.util.toByteSize
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import kotlinx.collections.immutable.ImmutableList
 import java.time.Instant
 
@@ -19,31 +21,29 @@ data class MagnetMetadata(
 
 sealed interface Storage {
     val name: String
+    val size: ByteSize
 
+    @Stable
     data class Directory(
         override val name: String,
+        override val size: ByteSize,
         val content: ImmutableList<Storage>,
     ) : Storage {
-        val size: ByteSize by lazy { calculateSize() }
+        var selected by mutableStateOf(SelectionState.Selected)
     }
 
     @Stable
-    interface File : Storage {
-        val id: Int
-        override val name: String
-        val size: ByteSize
-        var selected: Boolean
+    data class File(
+        val id: Int,
+        override val name: String,
+        override val size: ByteSize,
+    ) : Storage {
+        var selected by mutableStateOf(true)
     }
 }
 
-private fun Storage.Directory.calculateSize(): ByteSize {
-    val stack = ArrayDeque<Storage>().apply { addAll(content) }
-    tailrec fun go(acc: Long, stack: MutableList<Storage>): Long {
-        if (stack.isEmpty()) return acc
-        return when (val head = stack.removeLast()) {
-            is Storage.File -> go(acc + head.size.value, stack)
-            is Storage.Directory -> go(acc, stack.apply { addAll(head.content) })
-        }
-    }
-    return go(0, stack).toByteSize()
+enum class SelectionState {
+    Selected,
+    NotSelected,
+    PartiallySelected,
 }

@@ -37,6 +37,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalMinimumInteractiveComponentEnforcement
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TriStateCheckbox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
@@ -51,9 +52,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.github.pwoicik.torrentapp.domain.model.ByteSize
 import com.github.pwoicik.torrentapp.domain.model.MagnetMetadata
+import com.github.pwoicik.torrentapp.domain.model.SelectionState
 import com.github.pwoicik.torrentapp.domain.model.Storage
 import com.github.pwoicik.torrentapp.ui.util.formatSize
 import com.slack.circuit.foundation.internal.BackHandler
@@ -80,7 +84,7 @@ class FileStructureOverlay(
             enter = slideInHorizontally { it },
             exit = slideOutHorizontally { it },
         ) {
-            FileStructure(storage = Storage.Directory("(root)", info.files))
+            FileStructure(storage = Storage.Directory("(root)", ByteSize(), info.files))
         }
     }
 }
@@ -138,6 +142,18 @@ fun FileStructure(storage: Storage.Directory, modifier: Modifier = Modifier) {
                     navigatingUp = false
                     backstack.add(it)
                 },
+                onSelectClick = {
+                    when (it) {
+                        is Storage.File -> {
+                            it.selected = !it.selected
+                        }
+
+                        is Storage.Directory -> {
+                            it.select(it.selected != SelectionState.Selected)
+                        }
+                    }
+                    backstack.refreshSelected()
+                },
             )
         }
     }
@@ -192,6 +208,7 @@ private fun FileStructure(
     storage: ImmutableList<Storage>,
     onGoUp: () -> Unit,
     onOpenDirectory: (Storage.Directory) -> Unit,
+    onSelectClick: (Storage) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     LazyColumn(
@@ -218,11 +235,15 @@ private fun FileStructure(
             key = { it.name },
         ) {
             when (it) {
-                is Storage.File -> File(it)
+                is Storage.File -> File(
+                    file = it,
+                    onClick = { onSelectClick(it) },
+                )
 
                 is Storage.Directory -> Directory(
                     directory = it,
                     onClick = { onOpenDirectory(it) },
+                    onSelectClick = { onSelectClick(it) },
                 )
             }
         }
@@ -230,13 +251,17 @@ private fun FileStructure(
 }
 
 @Composable
-private fun File(file: Storage.File, modifier: Modifier = Modifier) {
+private fun File(
+    file: Storage.File,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     Row(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(6.dp))
-            .clickable { file.selected = !file.selected }
+            .clickable(role = Role.Checkbox) { onClick() }
             .padding(12.dp),
     ) {
         Icon(
@@ -263,7 +288,7 @@ private fun File(file: Storage.File, modifier: Modifier = Modifier) {
         ) {
             Checkbox(
                 checked = file.selected,
-                onCheckedChange = { file.selected = it },
+                onCheckedChange = { onClick() },
             )
         }
     }
@@ -273,10 +298,11 @@ private fun File(file: Storage.File, modifier: Modifier = Modifier) {
 private fun Directory(
     directory: Storage.Directory,
     onClick: () -> Unit,
+    onSelectClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Row(
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(6.dp))
@@ -288,9 +314,103 @@ private fun Directory(
             contentDescription = null,
             tint = MaterialTheme.colorScheme.tertiary.copy(0.7f),
         )
-        Text(
-            text = directory.name,
-            style = MaterialTheme.typography.bodyMedium,
-        )
+        Column(
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.weight(1f),
+        ) {
+            Text(
+                text = directory.name,
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            Text(
+                text = directory.size.formatSize(),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        CompositionLocalProvider(
+            LocalMinimumInteractiveComponentEnforcement provides false,
+        ) {
+            TriStateCheckbox(
+                state = when (directory.selected) {
+                    SelectionState.Selected -> ToggleableState.On
+                    SelectionState.NotSelected -> ToggleableState.Off
+                    SelectionState.PartiallySelected -> ToggleableState.Indeterminate
+                },
+                onClick = {
+                    onSelectClick()
+                },
+            )
+        }
     }
+}
+
+private fun List<Storage.Directory>.refreshSelected() =
+    asReversed().forEach { it.refreshSelected() }
+
+private fun Storage.Directory.refreshSelected() {
+    var partiallySelected = false
+    var selectedCount = 0
+    for (child in content) {
+        when (child.selectionState()) {
+            SelectionState.Selected -> {
+                ++selectedCount
+            }
+
+            SelectionState.NotSelected -> {
+                if (selectedCount > 0) break
+            }
+
+            SelectionState.PartiallySelected -> {
+                partiallySelected = true
+                break
+            }
+        }
+    }
+    selected = when {
+        partiallySelected
+        -> SelectionState.PartiallySelected
+
+        selectedCount == content.size
+        -> SelectionState.Selected
+
+        selectedCount == 0 -> SelectionState.NotSelected
+
+        else -> SelectionState.PartiallySelected
+    }
+}
+
+private fun Storage.selectionState(): SelectionState =
+    when (this) {
+        is Storage.Directory -> selected
+        is Storage.File -> if (selected) {
+            SelectionState.Selected
+        } else {
+            SelectionState.NotSelected
+        }
+    }
+
+private fun Storage.Directory.select(selected: Boolean) {
+    val stack = ArrayDeque<Storage.Directory>()
+    stack.add(this)
+
+    val newState = if (selected) {
+        SelectionState.Selected
+    } else {
+        SelectionState.NotSelected
+    }
+
+    tailrec fun go(stack: ArrayDeque<Storage.Directory>) {
+        if (stack.isEmpty()) return
+        val dir = stack.removeLast()
+        dir.selected = newState
+        dir.content.forEach {
+            when (it) {
+                is Storage.File -> it.selected = selected
+                is Storage.Directory -> stack.add(it)
+            }
+        }
+        go(stack)
+    }
+    go(stack)
 }
