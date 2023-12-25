@@ -1,6 +1,5 @@
 package com.github.pwoicik.torrentapp.data.usecase
 
-import android.util.Log
 import arrow.core.Either
 import arrow.core.left
 import arrow.core.right
@@ -20,6 +19,8 @@ import org.libtorrent4j.SessionManager
 import org.libtorrent4j.TorrentFlags
 import org.libtorrent4j.swig.error_code
 import java.nio.file.LinkOption
+import kotlin.io.encoding.Base64
+import kotlin.io.encoding.ExperimentalEncodingApi
 import kotlin.io.path.Path
 import kotlin.io.path.exists
 
@@ -29,30 +30,28 @@ class SaveMagnetUseCaseImpl(
     private val session: SessionManager,
     private val ioDispatcher: IoDispatcher,
 ) : SaveMagnetUseCase {
+    @OptIn(ExperimentalEncodingApi::class)
     override suspend fun invoke(input: SaveMagnetInput): Either<SaveMagnetError, Unit> {
         if (Path(input.savePath, input.info.name).exists(LinkOption.NOFOLLOW_LINKS)) {
             return SaveMagnetError.FileAlreadyExists.left()
         }
 
+        val params = AddTorrentParams.parseMagnetUri(input.info.uri.value).apply {
+            savePath = input.savePath
+            flags = flags.and_(TorrentFlags.AUTO_MANAGED.inv())
+            input.metadata?.files
+                ?.let { filePriorities(it.toPriorities()) }
+        }
         db.torrentQueries.insert(
             hash = input.info.hash.value,
             name = input.info.name,
             paused = !input.startImmediately,
             sequential = input.sequential,
             savePath = input.savePath,
+            resumeData = Base64.Default.encode(AddTorrentParams.writeResumeDataBuf(params)),
         )
-
         val handle = withContext(ioDispatcher) {
-            SessionHandle(session.swig()).addTorrent(
-                AddTorrentParams.parseMagnetUri(input.info.uri.value).apply {
-                    savePath = input.savePath
-                    flags = flags.and_(TorrentFlags.AUTO_MANAGED.inv())
-                    input.metadata?.files?.toPriorities()
-                        .also { Log.d("test", it.toString()) }
-                        ?.let(::filePriorities)
-                },
-                ErrorCode(error_code()),
-            )
+            SessionHandle(session.swig()).addTorrent(params, ErrorCode(error_code()))
         }
         if (input.startImmediately) {
             handle.resume()

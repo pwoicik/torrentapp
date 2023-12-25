@@ -18,7 +18,7 @@ getResumeData:
 SELECT resumeData FROM torrent;
 
 insert:
-INSERT OR IGNORE INTO torrent VALUES (?, ?, ?, ?, ?, NULL);
+INSERT OR IGNORE INTO torrent VALUES (?, ?, ?, ?, ?, ?);
 
 updateState:
 UPDATE torrent SET paused = ? WHERE hash = ?;

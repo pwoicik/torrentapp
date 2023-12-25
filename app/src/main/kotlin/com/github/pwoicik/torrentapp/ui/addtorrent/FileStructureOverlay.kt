@@ -400,7 +400,7 @@ private fun Storage.Directory.select(selected: Boolean) {
         SelectionState.NotSelected
     }
 
-    tailrec fun go(stack: ArrayDeque<Storage.Directory>) {
+    tailrec fun go() {
         if (stack.isEmpty()) return
         val dir = stack.removeLast()
         dir.selected = newState
@@ -410,7 +410,7 @@ private fun Storage.Directory.select(selected: Boolean) {
                 is Storage.Directory -> stack.add(it)
             }
         }
-        go(stack)
+        go()
     }
-    go(stack)
+    go()
 }
