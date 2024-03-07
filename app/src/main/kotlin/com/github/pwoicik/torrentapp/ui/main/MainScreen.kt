@@ -310,7 +310,7 @@ private fun MagnetFab(onNavEvent: (NavEvent.GoTo) -> Unit, modifier: Modifier = 
                             onNavEvent(it)
                         }
 
-                        NavEvent.Pop,
+                        is NavEvent.Pop,
                         -> visible = false
 
                         else -> Unit

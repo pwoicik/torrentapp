@@ -82,7 +82,7 @@ class MainActivity(
                 modifier = Modifier.fillMaxSize(),
                 color = MaterialTheme.colorScheme.background,
             ) {
-                val backstack = rememberSaveableBackStack { push(MainScreen) }
+                val backstack = rememberSaveableBackStack(MainScreen)
                 val circuitNavigator = rememberCircuitNavigator(backstack)
                 val navigator =
                     rememberAndroidScreenAwareNavigator(circuitNavigator, LocalContext.current)
@@ -90,7 +90,7 @@ class MainActivity(
                     ContentWithOverlays {
                         NavigableCircuitContent(
                             navigator = navigator,
-                            backstack = backstack,
+                            backStack = backstack,
                             decoration = GestureNavigationDecoration { navigator.pop() },
                         )
                     }
