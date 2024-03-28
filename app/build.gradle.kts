@@ -70,21 +70,24 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
         isCoreLibraryDesugaringEnabled = true
     }
 
     kotlinOptions {
-        jvmTarget = "17"
-        options.freeCompilerArgs.addAll(
-            "-Xcontext-receivers",
-        )
-        options.optIn.addAll(
-            "kotlinx.coroutines.FlowPreview",
-            "androidx.compose.material3.ExperimentalMaterial3Api",
-            "kotlin.io.encoding.ExperimentalEncodingApi",
-        )
+        jvmTarget = "21"
+        options.apply {
+            progressiveMode = true
+            freeCompilerArgs.addAll(
+                "-Xcontext-receivers",
+            )
+            optIn.addAll(
+                "kotlinx.coroutines.FlowPreview",
+                "androidx.compose.material3.ExperimentalMaterial3Api",
+                "kotlin.io.encoding.ExperimentalEncodingApi",
+            )
+        }
     }
 
     buildFeatures {
