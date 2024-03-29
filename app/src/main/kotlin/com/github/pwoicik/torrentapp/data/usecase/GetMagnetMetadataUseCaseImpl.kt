@@ -16,10 +16,10 @@ import com.github.pwoicik.torrentapp.ui.util.toByteSize
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.adapters.ImmutableListAdapter
 import kotlinx.coroutines.withContext
+import kotlinx.datetime.Instant
 import me.tatarka.inject.annotations.Inject
 import org.libtorrent4j.SessionManager
 import org.libtorrent4j.TorrentInfo
-import java.time.Instant
 
 @Inject
 class GetMagnetMetadataUseCaseImpl(
@@ -43,7 +43,7 @@ class GetMagnetMetadataUseCaseImpl(
             creator = info.creator()?.takeIf { it.isNotBlank() },
             creationDate = info.creationDate()
                 .takeIf { it != 0L }
-                ?.let(Instant::ofEpochSecond),
+                ?.let(Instant::fromEpochSeconds),
             numberOfFiles = info.numFiles(),
             totalSize = info.totalSize().let(::ByteSize),
             numberOfPieces = info.numPieces(),

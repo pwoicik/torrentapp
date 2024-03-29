@@ -13,6 +13,7 @@ compose-compiler = "1.5.11"
 compose-m3 = "1.2.1"
 coreKtx = "1.12.0"
 datastore = "1.1.0-beta02"
+datetime = "0.6.0-RC.2"
 desugaring = "2.0.4"
 detekt = "1.23.6"
 detekt-compose = "0.3.12"
@@ -65,6 +66,7 @@ detekt-compose = { module = "io.nlopez.compose.rules:detekt", version.ref = "det
 detekt-formatting = { module = "io.gitlab.arturbosch.detekt:detekt-formatting", version.ref = "detekt" }
 jna = { module = "net.java.dev.jna:jna", version.ref = "jna" }
 junit = { module = "junit:junit", version.ref = "junit" }
+kotlin-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "datetime" }
 ktinject = { module = "me.tatarka.inject:kotlin-inject-runtime", version.ref = "ktinject" }
 ktinject-compiler = { module = "me.tatarka.inject:kotlin-inject-compiler-ksp", version.ref = "ktinject" }
 ktor-server = { module = "io.ktor:ktor-server-core", version.ref = "ktor" }

@@ -170,4 +170,6 @@ dependencies {
     implementation(libs.datastore)
 
     implementation(libs.work)
+
+    implementation(libs.kotlin.datetime)
 }

@@ -79,11 +79,12 @@ import com.slack.circuit.runtime.Navigator
 import com.slack.circuit.runtime.screen.Screen
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.format.Padding
+import kotlinx.datetime.format.char
+import kotlinx.datetime.toLocalDateTime
 import kotlinx.parcelize.Parcelize
-import java.time.LocalDateTime
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-import java.time.format.FormatStyle
 
 @Parcelize
 data class AddTorrentScreen(
@@ -432,13 +433,20 @@ private fun TorrentInfo(info: MagnetMetadata, modifier: Modifier = Modifier) {
                     modifier = Modifier.weight(1f),
                 )
             }
+
             info.creationDate?.let {
                 LabeledValue(
                     label = "Created on",
-                    value = LocalDateTime.ofInstant(
-                        it,
-                        ZoneId.systemDefault(),
-                    ).format(DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM)),
+                    value = LocalDateTime.Format {
+                        dayOfMonth(Padding.ZERO)
+                        char('.')
+                        monthNumber(Padding.ZERO)
+                        char('.')
+                        year()
+                        char(' ')
+                        hour(Padding.ZERO)
+                        minute(Padding.ZERO)
+                    }.format(it.toLocalDateTime(TimeZone.currentSystemDefault())),
                     modifier = Modifier.weight(1f),
                 )
             }

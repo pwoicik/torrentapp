@@ -5,7 +5,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import kotlinx.collections.immutable.ImmutableList
-import java.time.Instant
+import kotlinx.datetime.Instant
 
 data class MagnetMetadata(
     val name: String,
