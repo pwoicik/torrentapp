@@ -45,6 +45,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
@@ -60,6 +61,7 @@ import com.github.pwoicik.torrentapp.domain.usecase.GetTorrentsUseCase
 import com.github.pwoicik.torrentapp.domain.usecase.invoke
 import com.github.pwoicik.torrentapp.ui.main.MainScreen.Event
 import com.github.pwoicik.torrentapp.ui.settings.SettingsScreen
+import com.github.pwoicik.torrentapp.ui.torrent.TorrentScreen
 import com.github.pwoicik.torrentapp.ui.util.formatSpeed
 import com.slack.circuit.foundation.CircuitContent
 import com.slack.circuit.foundation.NavEvent
@@ -82,6 +84,7 @@ data object MainScreen : Screen {
 
     sealed interface Event : CircuitUiEvent {
         data class ChildNav(val value: NavEvent.GoTo) : Event
+        data class TorrentClick(val value: Torrent) : Event
     }
 }
 
@@ -93,6 +96,7 @@ fun MainPresenter(navigator: Navigator, getTorrents: GetTorrentsUseCase): MainSc
     ) {
         when (it) {
             is Event.ChildNav -> navigator.onNavEvent(it.value)
+            is Event.TorrentClick -> navigator.goTo(TorrentScreen(it.value.hash))
         }
     }
 }
@@ -136,19 +140,29 @@ fun MainContent(uiState: MainScreen.State, modifier: Modifier = Modifier) {
     ) { innerPadding ->
         LazyColumn(contentPadding = innerPadding) {
             items(uiState.torrents.orEmpty()) {
-                Torrent(torrent = it)
+                Torrent(
+                    torrent = it,
+                    onClick = { uiState(Event.TorrentClick(it)) },
+                )
             }
         }
     }
 }
 
 @Composable
-private fun Torrent(torrent: Torrent, modifier: Modifier = Modifier) {
+private fun Torrent(
+    torrent: Torrent,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val stats by torrent.transferStats.collectAsStateWithLifecycle(TorrentTransferStats())
     val coroutineScope = rememberCoroutineScope()
     Row(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
-        modifier = modifier.padding(12.dp, 12.dp, 18.dp, 12.dp),
+        modifier = modifier
+            .clip(RoundedCornerShape(36.dp))
+            .clickable(onClick = onClick)
+            .padding(12.dp, 12.dp, 18.dp, 12.dp),
     ) {
         PlayPauseButton(
             paused = stats.state.isPaused,

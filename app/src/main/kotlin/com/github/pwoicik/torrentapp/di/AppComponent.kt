@@ -45,6 +45,9 @@ import com.github.pwoicik.torrentapp.ui.main.SessionStatsScreen
 import com.github.pwoicik.torrentapp.ui.settings.SettingsContent
 import com.github.pwoicik.torrentapp.ui.settings.SettingsPresenter
 import com.github.pwoicik.torrentapp.ui.settings.SettingsScreen
+import com.github.pwoicik.torrentapp.ui.torrent.TorrentContent
+import com.github.pwoicik.torrentapp.ui.torrent.TorrentPresenter
+import com.github.pwoicik.torrentapp.ui.torrent.TorrentScreen
 import com.slack.circuit.foundation.Circuit
 import com.slack.circuit.runtime.presenter.Presenter
 import com.slack.circuit.runtime.presenter.presenterOf
@@ -194,6 +197,28 @@ interface UiComponent {
             when (screen) {
                 is SettingsScreen,
                 -> ui<SettingsScreen.State> { state, modifier -> SettingsContent(state, modifier) }
+
+                else -> null
+            }
+        }
+
+    @[Provides IntoSet]
+    fun torrentPresenterFactory() =
+        Presenter.Factory { screen, navigator, _ ->
+            when (screen) {
+                is TorrentScreen,
+                -> presenterOf { TorrentPresenter(screen, navigator) }
+
+                else -> null
+            }
+        }
+
+    @[Provides IntoSet]
+    fun torrentUiFactory() =
+        Ui.Factory { screen, _ ->
+            when (screen) {
+                is TorrentScreen,
+                -> ui<TorrentScreen.State> { state, modifier -> TorrentContent(state, modifier) }
 
                 else -> null
             }
